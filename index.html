@@ -46,7 +46,7 @@ td{padding:8px;border-bottom:1px solid #f3f4f6}
 .cr{color:#2d6a2d}
 .db{color:#c0392b}
 .tot td{font-weight:700;background:#f9fafb;border-top:2px solid #e5e7eb}
-canvas{width:100%;border-radius:6px;background:#f9fafb;margin-top:4px}
+canvas{width:100%;border-radius:6px;background:#f9fafb;margin-top:4px;display:block}
 .print-btn{font-size:13px;font-weight:700;padding:8px 16px;border-radius:8px;border:1.5px solid #d1d5db;background:#fff;cursor:pointer;margin-top:12px}
 footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
 </style>
@@ -293,71 +293,122 @@ function calculate() {
 
 function drawChart(demand, totalAvail, stagePct, stageVal, surplus) {
   var canvas = gv('curve');
-  var H = 220;
+  var H = 260;
   var W = canvas.offsetWidth || 300;
   canvas.width = W; canvas.height = H;
   var ctx = canvas.getContext('2d');
-  var P = {t:24, r:14, b:40, l:44};
+  var P = {t:28, r:80, b:40, l:50};
   var cw = W-P.l-P.r, ch = H-P.t-P.b;
-  var maxY = Math.ceil(Math.max(demand, Math.max(totalAvail,1))/50)*50+10;
+
   var curIdx = 0;
   for (var i=0; i<STAGES.length; i++) { if (STAGES[i].v===stageVal) { curIdx=i; break; } }
+
+  // N-remaining values at each stage: totalAvail minus cumulative uptake at that stage
+  var remVals = [];
+  for (var i=0; i<STAGES.length; i++) remVals.push(totalAvail - demand*STAGES[i].pct/100);
+
+  var maxY = Math.ceil(Math.max(demand, totalAvail, 1)/50)*50+20;
+  var minY = Math.min(0, Math.floor(Math.min.apply(null,remVals)/50)*50-10);
+
+  var span = maxY - minY;
   function xp(i){ return P.l+(i/(STAGES.length-1))*cw; }
-  function yp(v){ return P.t+ch-(v/maxY)*ch; }
+  function yp(v){ return P.t+ch-((v-minY)/span)*ch; }
 
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle='#f9fafb'; ctx.fillRect(P.l,P.t,cw,ch);
 
+  // Zero line (if below zero is possible)
+  if (minY < 0) {
+    var zy = yp(0);
+    ctx.beginPath(); ctx.moveTo(P.l,zy); ctx.lineTo(P.l+cw,zy);
+    ctx.strokeStyle='rgba(192,57,43,0.3)'; ctx.lineWidth=1; ctx.setLineDash([4,3]); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(192,57,43,0.5)'; ctx.font='9px system-ui'; ctx.textAlign='right';
+    ctx.fillText('0', P.l-4, zy+4);
+  }
+
   // Grid
   ctx.strokeStyle='rgba(0,0,0,0.06)'; ctx.lineWidth=1;
-  for (var v=0; v<=maxY; v+=50) {
+  for (var v=minY; v<=maxY; v+=50) {
+    if (v===0 && minY<0) continue; // already drew zero line
     var gy=yp(v); ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+cw,gy); ctx.stroke();
     ctx.fillStyle='#9ca3af'; ctx.font='10px system-ui'; ctx.textAlign='right';
     ctx.fillText(v, P.l-4, gy+4);
   }
 
+  // Demand curve points
   var pts = [];
   for (var i=0; i<STAGES.length; i++) pts.push({x:xp(i), y:yp(demand*STAGES[i].pct/100)});
 
-  // Green fill (taken up)
+  // N-remaining line points
+  var rpts = [];
+  for (var i=0; i<STAGES.length; i++) rpts.push({x:xp(i), y:yp(remVals[i])});
+
+  // Subtle fill under demand curve (past = green, future = gray)
   ctx.beginPath(); ctx.moveTo(pts[0].x,yp(0));
   for (var i=0; i<=curIdx; i++) ctx.lineTo(pts[i].x,pts[i].y);
   ctx.lineTo(pts[curIdx].x,yp(0)); ctx.closePath();
-  ctx.fillStyle='rgba(76,175,80,0.2)'; ctx.fill();
+  ctx.fillStyle='rgba(76,175,80,0.1)'; ctx.fill();
 
-  // Gray fill (remaining)
   ctx.beginPath(); ctx.moveTo(pts[curIdx].x,yp(0));
   for (var i=curIdx; i<STAGES.length; i++) ctx.lineTo(pts[i].x,pts[i].y);
   ctx.lineTo(pts[STAGES.length-1].x,yp(0)); ctx.closePath();
-  ctx.fillStyle='rgba(180,180,180,0.12)'; ctx.fill();
+  ctx.fillStyle='rgba(180,180,180,0.08)'; ctx.fill();
 
-  // Demand curve
+  // Demand curve (green, solid)
   ctx.beginPath();
   for (var i=0; i<pts.length; i++) { if(i===0) ctx.moveTo(pts[i].x,pts[i].y); else ctx.lineTo(pts[i].x,pts[i].y); }
-  ctx.strokeStyle='#2d6a2d'; ctx.lineWidth=2.5; ctx.setLineDash([]); ctx.stroke();
+  ctx.strokeStyle='#2d6a2d'; ctx.lineWidth=2; ctx.setLineDash([]); ctx.stroke();
 
-  // Dots
+  // Demand curve dots
   for (var i=0; i<pts.length; i++) {
-    ctx.beginPath(); ctx.arc(pts[i].x,pts[i].y,3.5,0,Math.PI*2);
+    ctx.beginPath(); ctx.arc(pts[i].x,pts[i].y,3,0,Math.PI*2);
     ctx.fillStyle=i<=curIdx?'#2d6a2d':'#bbb'; ctx.fill();
   }
 
-  // N available line
-  var avY=yp(Math.max(0,totalAvail));
-  var avCol=surplus>=0?'#1565C0':'#c0392b';
-  ctx.beginPath(); ctx.moveTo(P.l,avY); ctx.lineTo(P.l+cw,avY);
-  ctx.strokeStyle=avCol; ctx.lineWidth=2.5; ctx.setLineDash([7,5]); ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle=avCol; ctx.font='bold 9px system-ui'; ctx.textAlign='left';
-  ctx.fillText('N Avail: '+Math.round(totalAvail)+' lb/ac', P.l+3, avY-4);
+  // N-remaining line: solid past (blue/red), dashed projected future
+  var remCol = surplus>=0 ? '#1565C0' : '#c0392b';
+  var remColLight = surplus>=0 ? 'rgba(21,101,192,0.55)' : 'rgba(192,57,43,0.55)';
 
-  // Current stage line
-  var cx=pts[curIdx].x;
+  // Solid: stage 0 → curIdx (where we've been)
+  ctx.beginPath();
+  for (var i=0; i<=curIdx; i++) { if(i===0) ctx.moveTo(rpts[i].x,rpts[i].y); else ctx.lineTo(rpts[i].x,rpts[i].y); }
+  ctx.strokeStyle=remCol; ctx.lineWidth=2.5; ctx.setLineDash([]); ctx.stroke();
+
+  // Dashed: curIdx → end (projected)
+  ctx.beginPath();
+  for (var i=curIdx; i<STAGES.length; i++) { if(i===curIdx) ctx.moveTo(rpts[i].x,rpts[i].y); else ctx.lineTo(rpts[i].x,rpts[i].y); }
+  ctx.strokeStyle=remColLight; ctx.lineWidth=2; ctx.setLineDash([7,4]); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Dot at current position on N-remaining line
+  ctx.beginPath(); ctx.arc(rpts[curIdx].x,rpts[curIdx].y,5,0,Math.PI*2);
+  ctx.fillStyle=remCol; ctx.fill();
+  ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+
+  // Current stage vertical
+  var cx=xp(curIdx);
   ctx.beginPath(); ctx.moveTo(cx,P.t); ctx.lineTo(cx,P.t+ch);
-  ctx.strokeStyle='#f59e0b'; ctx.lineWidth=2; ctx.setLineDash([5,3]); ctx.stroke();
+  ctx.strokeStyle='rgba(245,158,11,0.7)'; ctx.lineWidth=1.5; ctx.setLineDash([5,3]); ctx.stroke();
   ctx.setLineDash([]);
   ctx.fillStyle='#f59e0b'; ctx.font='bold 9px system-ui'; ctx.textAlign='center';
   ctx.fillText('Now',cx,P.t+ch+13);
+
+  // Right-side legend labels (avoid overlap with chart lines)
+  var lx = P.l+cw+5;
+  // Demand curve label
+  var demEndY = pts[STAGES.length-1].y;
+  ctx.fillStyle='#2d6a2d'; ctx.font='bold 9px system-ui'; ctx.textAlign='left';
+  ctx.fillText('Demand', lx, demEndY+3);
+
+  // N remaining label at end of projected line
+  var remEndY = rpts[STAGES.length-1].y;
+  ctx.fillStyle=remColLight; ctx.font='bold 9px system-ui'; ctx.textAlign='left';
+  ctx.fillText('N Rem.', lx, remEndY+3);
+  // Value at current stage
+  var curRem = remVals[curIdx];
+  ctx.fillStyle=remCol; ctx.font='bold 10px system-ui'; ctx.textAlign='left';
+  ctx.fillText(Math.round(curRem)+' lb', lx, rpts[curIdx].y+3);
 
   // X labels
   ctx.fillStyle='#9ca3af'; ctx.font='9px system-ui'; ctx.textAlign='center';
