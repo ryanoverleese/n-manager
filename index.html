@@ -576,11 +576,13 @@ async function fetchWeatherBands(){
   var plantMD=plantDate.substring(5); // "05-02"
   if(ws){ws.textContent='Loading 50-year weather history\u2026';ws.style.display='block';ws.style.color='#9ca3af';}
   try{
-    // Geocode county
-    var geoRes=await fetch('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(county+' County '+state)+'&count=1&language=en&format=json');
+    // Geocode county via Nominatim (OSM) — handles US county names reliably
+    var cleanCounty=county.replace(/county/i,'').trim();
+    var geoQ=encodeURIComponent(cleanCounty+' County, '+state+', USA');
+    var geoRes=await fetch('https://nominatim.openstreetmap.org/search?q='+geoQ+'&format=json&limit=1');
     var geoData=await geoRes.json();
-    if(!geoData.results||!geoData.results.length)throw new Error('Location not found');
-    var lat=geoData.results[0].latitude, lon=geoData.results[0].longitude;
+    if(!geoData||!geoData.length)throw new Error('Location not found');
+    var lat=parseFloat(geoData[0].lat), lon=parseFloat(geoData[0].lon);
 
     // Fetch 50 years of daily precip
     var curYear=new Date().getFullYear();
