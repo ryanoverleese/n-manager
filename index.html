@@ -71,6 +71,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
   <div class="row2">
     <div><label>Field Name</label><input type="text" id="fieldName" value="John Doe — North Pivot"></div>
     <div><label>County</label><input type="text" id="county" value="Kearney" placeholder="e.g. Kearney"></div>
+    <div><label>State</label><input type="text" id="state" value="Nebraska" placeholder="e.g. Nebraska"></div>
     <div><label>Yield Goal (bu/acre)</label><input type="number" id="yieldGoal" value="230" min="100" max="400"><div class="hint">N demand = yield × 1.0 lb N/bu</div></div>
     <div><label>Soil OM (%)</label><input type="number" id="om" value="2.8" min="0.5" max="8" step="0.1"><div class="hint">OM × 20 = lb N/acre credit</div></div>
   </div>
@@ -191,7 +192,9 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
       <span class="leg-item"><span class="leg-solid"></span> N Remaining</span>
       <span class="leg-item"><span class="leg-dash"></span> Projected</span>
       <span class="leg-item"><span class="leg-ring"></span> You are here</span>
+      <span class="leg-item" id="leg-bands" style="display:none"><span style="display:inline-block;width:20px;height:8px;background:rgba(100,120,150,0.18);border-radius:2px"></span> 50-yr range</span>
     </div>
+    <div id="weather-status" style="display:none;font-size:11px;color:#9ca3af;margin-top:6px"></div>
   </div>
 
   <div class="section">
@@ -299,7 +302,7 @@ function calculate() {
   gv('results').style.display = 'block';
 
   drawChart(demand, totalAvail, stagePct, stageVal, surplus);
-
+  fetchWeatherBands();
   gv('results').scrollIntoView({behavior:'smooth'});
 }
 
@@ -392,6 +395,27 @@ function _render(prog, hover, prad){
     ctx.fillText('VT/R1 min',P.l+cw+3,vtY+3);
   }
 
+  // Historical percentile bands (drawn before clip so they show full width)
+  if(d.bands){
+    var b=d.bands, n2=d.n;
+    function bx(i){return xp(i);} function by(v){return yp(v);}
+    // 10th-90th band (lightest)
+    ctx.beginPath();
+    for(var i=0;i<n2;i++){i===0?ctx.moveTo(bx(i),by(b.p90[i])):ctx.lineTo(bx(i),by(b.p90[i]));}
+    for(var i=n2-1;i>=0;i--){ctx.lineTo(bx(i),by(b.p10[i]));}
+    ctx.closePath(); ctx.fillStyle='rgba(100,120,160,0.09)'; ctx.fill();
+    // 25th-75th band (medium)
+    ctx.beginPath();
+    for(var i=0;i<n2;i++){i===0?ctx.moveTo(bx(i),by(b.p75[i])):ctx.lineTo(bx(i),by(b.p75[i]));}
+    for(var i=n2-1;i>=0;i--){ctx.lineTo(bx(i),by(b.p25[i]));}
+    ctx.closePath(); ctx.fillStyle='rgba(100,120,160,0.14)'; ctx.fill();
+    // 50th percentile median line
+    ctx.beginPath();
+    for(var i=0;i<n2;i++){i===0?ctx.moveTo(bx(i),by(b.p50[i])):ctx.lineTo(bx(i),by(b.p50[i]));}
+    ctx.strokeStyle='rgba(100,120,160,0.5)'; ctx.lineWidth=1.5; ctx.setLineDash([5,3]); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
   ctx.save();
   ctx.beginPath(); ctx.rect(P.l-1,0,cw*prog+2,H); ctx.clip();
 
@@ -482,10 +506,16 @@ function _bindEvents(){
     var v=d.remVals[idx], proj=idx>d.curIdx;
     var lbl=v>30?'Sufficient':v>10?'Marginal':v>0?'Borderline':'Deficient';
     var col=v>30?'#4ade80':v>10?'#fbbf24':v>0?'#f97316':'#f87171';
+    var bandHtml='';
+    if(d.bands){
+      var p10=Math.round(d.bands.p10[idx]), p90=Math.round(d.bands.p90[idx]), p50=Math.round(d.bands.p50[idx]);
+      bandHtml='<div style="margin-top:5px;font-size:10px;color:#aab4bf">50-yr range: <strong style="color:#ccc">'+p10+'–'+p90+' lb</strong><br>Median: <strong style="color:#ccc">'+p50+' lb</strong></div>';
+    }
     tip.innerHTML='<div style="font-weight:800;font-size:13px;margin-bottom:3px">'+STAGES[idx].l+'</div>'+
       'N Remaining: <span style="color:'+d.lc+';font-weight:800">'+Math.round(v)+' lb/ac</span><br>'+
       '<span style="color:'+col+';font-size:11px;font-weight:700">'+lbl+'</span>'+
-      (proj?'<div style="margin-top:3px;font-size:10px;opacity:0.55;font-style:italic">projected</div>':'');
+      (proj?'<div style="margin-top:3px;font-size:10px;opacity:0.55;font-style:italic">projected</div>':'')+
+      bandHtml;
     tip.style.display='block';
     var tw=tip.offsetWidth, th=tip.offsetHeight;
     tip.style.left=Math.max(4,Math.min(clientX-tw/2,window.innerWidth-tw-4))+'px';
@@ -506,6 +536,98 @@ function _bindEvents(){
     showTip(t.clientX,t.clientY,nearest(t.clientX-rect.left));
   };
   canvas.ontouchend=hideTip;
+}
+
+var _STAGE_DAYS_SIM = [7, 21, 35, 49, 63, 75, 83, 93, 103, 113, 125];
+
+function _pctile(arr, p){
+  var s=arr.slice().sort(function(a,b){return a-b;});
+  var idx=Math.min(Math.floor(s.length*p), s.length-1);
+  return s[idx];
+}
+
+function _simYear(demand, totalAvail, precipMm){
+  var avail=totalAvail, satDays=0, prevDay=0, result=[];
+  for(var s=0;s<STAGES.length;s++){
+    var dayEnd=_STAGE_DAYS_SIM[s];
+    for(var day=prevDay;day<dayEnd&&day<precipMm.length;day++){
+      var p=(precipMm[day]||0)/25.4; // mm to inches
+      if(p>1.5){
+        avail-=avail*Math.min(0.20,(p-1.5)*0.09);
+        satDays=Math.min(satDays+2,6);
+      } else {
+        satDays=Math.max(0,satDays-1);
+      }
+      if(satDays>=3){ avail-=avail*0.025; satDays=1; }
+      if(avail<0)avail=0;
+    }
+    prevDay=dayEnd;
+    result.push(avail - demand*STAGES[s].pct/100);
+  }
+  return result;
+}
+
+async function fetchWeatherBands(){
+  var county=(gv('county').value||'Kearney').trim();
+  var state=(gv('state').value||'Nebraska').trim();
+  var plantDate=gv('plantDate').value;
+  var ws=gv('weather-status');
+  if(!plantDate||!_chart)return;
+  var plantMD=plantDate.substring(5); // "05-02"
+  if(ws){ws.textContent='Loading 50-year weather history\u2026';ws.style.display='block';ws.style.color='#9ca3af';}
+  try{
+    // Geocode county
+    var geoRes=await fetch('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(county+' County '+state)+'&count=1&language=en&format=json');
+    var geoData=await geoRes.json();
+    if(!geoData.results||!geoData.results.length)throw new Error('Location not found');
+    var lat=geoData.results[0].latitude, lon=geoData.results[0].longitude;
+
+    // Fetch 50 years of daily precip
+    var curYear=new Date().getFullYear();
+    var startDate=(curYear-51)+'-'+plantMD;
+    var endDate=(curYear-1)+'-10-15';
+    var wRes=await fetch('https://archive-api.open-meteo.com/v1/archive?latitude='+lat+'&longitude='+lon+'&start_date='+startDate+'&end_date='+endDate+'&daily=precipitation_sum&timezone=auto');
+    var wData=await wRes.json();
+    if(!wData.daily||!wData.daily.time)throw new Error('No weather data');
+
+    // Group into per-year arrays starting from plantMD
+    var yearPrecip={};
+    var times=wData.daily.time, precip=wData.daily.precipitation_sum;
+    for(var i=0;i<times.length;i++){
+      var yr=parseInt(times[i].substring(0,4));
+      var md=times[i].substring(5);
+      if(!yearPrecip[yr]&&md===plantMD) yearPrecip[yr]=[];
+      if(yearPrecip[yr]!==undefined&&yearPrecip[yr].length<140) yearPrecip[yr].push(precip[i]||0);
+    }
+
+    // Simulate each year
+    var demand=_chart.demand, totalAvail=_chart.totalAvail;
+    var allRem=[];
+    for(var yr in yearPrecip){
+      if(yearPrecip[yr].length>=100) allRem.push(_simYear(demand,totalAvail,yearPrecip[yr]));
+    }
+    if(allRem.length<10)throw new Error('Not enough data');
+
+    // Compute percentiles at each stage
+    var bands={p10:[],p25:[],p50:[],p75:[],p90:[]};
+    for(var s=0;s<STAGES.length;s++){
+      var vals=allRem.map(function(y){return y[s];});
+      bands.p10.push(_pctile(vals,0.10));
+      bands.p25.push(_pctile(vals,0.25));
+      bands.p50.push(_pctile(vals,0.50));
+      bands.p75.push(_pctile(vals,0.75));
+      bands.p90.push(_pctile(vals,0.90));
+    }
+
+    _chart.bands=bands;
+    if(ws){ws.textContent='Historical range based on '+allRem.length+' years of weather data \u00b7 '+county+', '+state;}
+    var lb=gv('leg-bands'); if(lb)lb.style.display='';
+    _render(1,-1,0);
+    if(!_pulseRaf)_pulse();
+  } catch(e){
+    console.warn('Weather bands:',e.message);
+    if(ws){ws.textContent='Weather history unavailable for this location.';ws.style.color='#f87171';}
+  }
 }
 </script>
 </body>
