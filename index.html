@@ -375,16 +375,35 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus) {
   for (var i=0; i<=curIdx; i++) { if(i===0) ctx.moveTo(rpts[i].x,rpts[i].y); else ctx.lineTo(rpts[i].x,rpts[i].y); }
   ctx.strokeStyle=remCol; ctx.lineWidth=2.5; ctx.setLineDash([]); ctx.stroke();
 
+  // Confidence band around projected portion (±12% of remaining value, widening toward end)
+  var bandCol = surplus>=0 ? 'rgba(21,101,192,0.10)' : 'rgba(192,57,43,0.10)';
+  ctx.beginPath();
+  // Top edge of band
+  ctx.moveTo(rpts[curIdx].x, rpts[curIdx].y);
+  for (var i=curIdx+1; i<STAGES.length; i++) {
+    var spread = (remVals[i]/maxY) * ch * 0.10 * ((i-curIdx)/(STAGES.length-curIdx));
+    ctx.lineTo(rpts[i].x, rpts[i].y - spread);
+  }
+  // Bottom edge of band (reverse)
+  for (var i=STAGES.length-1; i>=curIdx; i--) {
+    var spread = (Math.abs(remVals[i])/maxY) * ch * 0.10 * ((i-curIdx)/(STAGES.length-curIdx));
+    ctx.lineTo(rpts[i].x, rpts[i].y + spread);
+  }
+  ctx.closePath();
+  ctx.fillStyle=bandCol; ctx.fill();
+
   // Dashed: curIdx → end (projected)
   ctx.beginPath();
   for (var i=curIdx; i<STAGES.length; i++) { if(i===curIdx) ctx.moveTo(rpts[i].x,rpts[i].y); else ctx.lineTo(rpts[i].x,rpts[i].y); }
-  ctx.strokeStyle=remColLight; ctx.lineWidth=2; ctx.setLineDash([7,4]); ctx.stroke();
+  ctx.strokeStyle=remColLight; ctx.lineWidth=2.5; ctx.setLineDash([8,5]); ctx.stroke();
   ctx.setLineDash([]);
 
-  // Dot at current position on N-remaining line
-  ctx.beginPath(); ctx.arc(rpts[curIdx].x,rpts[curIdx].y,5,0,Math.PI*2);
+  // ⊙ at current position: outer ring + inner filled dot
+  var cx2=rpts[curIdx].x, cy2=rpts[curIdx].y;
+  ctx.beginPath(); ctx.arc(cx2,cy2,9,0,Math.PI*2);
+  ctx.strokeStyle=remCol; ctx.lineWidth=2.5; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx2,cy2,4,0,Math.PI*2);
   ctx.fillStyle=remCol; ctx.fill();
-  ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
 
   // Current stage vertical
   var cx=xp(curIdx);
