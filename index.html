@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acre Insights — N Manager</title>
+<style>
+body{font-family:-apple-system,sans-serif;background:#f4f6f8;color:#1f2937;font-size:16px;margin:0;padding:0}
+header{background:#2d6a2d;color:#fff;padding:16px 20px}
+header h1{font-size:18px;margin:0}
+header p{font-size:13px;opacity:.8;margin:4px 0 0}
+.wrap{max-width:640px;margin:0 auto;padding:16px}
+.section{background:#fff;border:1px solid #d1d5db;border-radius:10px;padding:16px;margin-bottom:14px}
+.section h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:#6b7280;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid #eee}
+label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;margin-top:12px}
+label:first-child{margin-top:0}
+input,select{width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:15px;color:#1f2937;background:#fff;box-sizing:border-box}
+.hint{font-size:12px;color:#6b7280;margin-top:3px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:480px){.row2{grid-template-columns:1fr}}
+.app-box{border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-top:10px;background:#fafafa}
+.app-box h3{font-size:13px;font-weight:700;color:#2d6a2d;margin:0 0 10px}
+.radio-group{margin-top:8px}
+.radio-group label{font-size:14px;font-weight:400;display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer}
+.radio-group input[type=radio]{width:auto}
+.calc-btn{display:block;width:100%;padding:16px;background:#2d6a2d;color:#fff;border:none;border-radius:10px;font-size:17px;font-weight:700;cursor:pointer;margin:8px 0 20px}
+/* Results */
+#results{display:none}
+.banner{border-radius:10px;padding:18px;margin-bottom:14px}
+.banner.sufficient{background:#e8f5e9;border:2px solid #4caf50}
+.banner.marginal,.banner.borderline{background:#fffbeb;border:2px solid #f59e0b}
+.banner.deficit{background:#fdecea;border:2px solid #c0392b}
+.big-num{font-size:32px;font-weight:800;margin:4px 0}
+.sufficient .big-num{color:#2d6a2d}
+.marginal .big-num,.borderline .big-num{color:#92400e}
+.deficit .big-num{color:#c0392b}
+.status-lbl{font-size:17px;font-weight:800;margin-bottom:4px}
+.sufficient .status-lbl{color:#2d6a2d}
+.marginal .status-lbl,.borderline .status-lbl{color:#92400e}
+.deficit .status-lbl{color:#c0392b}
+.rec{font-size:14px;color:#1f2937;margin-top:4px}
+.fert-rec{font-size:14px;font-weight:700;margin-top:6px}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+th{text-align:left;padding:7px 8px;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb}
+td{padding:8px;border-bottom:1px solid #f3f4f6}
+.cr{color:#2d6a2d}
+.db{color:#c0392b}
+.tot td{font-weight:700;background:#f9fafb;border-top:2px solid #e5e7eb}
+canvas{width:100%;border-radius:6px;background:#f9fafb;margin-top:4px}
+.print-btn{font-size:13px;font-weight:700;padding:8px 16px;border-radius:8px;border:1.5px solid #d1d5db;background:#fff;cursor:pointer;margin-top:12px}
+footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Acre Insights — N Manager</h1>
+  <p>Irrigated corn mid-season nitrogen sufficiency tool</p>
+</header>
+
+<div class="wrap">
+
+<div class="section">
+  <h2>Field Information</h2>
+  <div class="row2">
+    <div><label>Field Name</label><input type="text" id="fieldName" value="John Doe — North Pivot"></div>
+    <div><label>County</label><input type="text" id="county" value="Kearney" placeholder="e.g. Kearney"></div>
+    <div><label>Yield Goal (bu/acre)</label><input type="number" id="yieldGoal" value="230" min="100" max="400"><div class="hint">N demand = yield × 1.0 lb N/bu</div></div>
+    <div><label>Soil OM (%)</label><input type="number" id="om" value="2.8" min="0.5" max="8" step="0.1"><div class="hint">OM × 20 = lb N/acre credit</div></div>
+  </div>
+  <label>Previous Crop</label>
+  <select id="prevCrop">
+    <option value="corn">Corn</option>
+    <option value="soy">Soybean (+50 lb N/acre credit)</option>
+    <option value="other">Other</option>
+  </select>
+  <label>Planting Date</label>
+  <input type="date" id="plantDate" value="2026-05-02">
+  <label>Current Growth Stage</label>
+  <select id="stage">
+    <option value="VE-V3" data-pct="5">VE – V3 (Emergence – 3-leaf)</option>
+    <option value="V4-V6" data-pct="10">V4 – V6 (4 to 6-leaf)</option>
+    <option value="V7-V9" data-pct="20">V7 – V9 (7 to 9-leaf)</option>
+    <option value="V10-V12" data-pct="35" selected>V10 – V12 (10 to 12-leaf)</option>
+    <option value="V13-V15" data-pct="55">V13 – V15 (13 to 15-leaf)</option>
+    <option value="V16-VT" data-pct="70">V16 – VT (to Tassel)</option>
+    <option value="R1" data-pct="80">R1 – Silking</option>
+    <option value="R2" data-pct="88">R2 – Blister</option>
+    <option value="R3" data-pct="94">R3 – Milk</option>
+    <option value="R4" data-pct="98">R4 – Dough</option>
+    <option value="R5-R6" data-pct="100">R5 – R6 (Dent to Black Layer)</option>
+  </select>
+</div>
+
+<div class="section">
+  <h2>Nitrogen Applications</h2>
+  <div class="app-box">
+    <h3>Pre-plant</h3>
+    <div class="row2">
+      <div><label>Product</label>
+        <select id="pp-prod">
+          <option selected>Anhydrous Ammonia (82% N)</option>
+          <option>UAN 28%</option><option>UAN 32%</option>
+          <option>Urea (46% N)</option><option>AMS (21% N)</option><option>Other</option>
+        </select></div>
+      <div><label>Rate (lb N/acre)</label><input type="number" id="pp-rate" value="150" min="0" max="300"></div>
+    </div>
+  </div>
+  <div class="app-box">
+    <h3>Sidedress</h3>
+    <div class="row2">
+      <div><label>Product</label>
+        <select id="sd-prod">
+          <option>Anhydrous Ammonia (82% N)</option><option selected>UAN 28%</option>
+          <option>UAN 32%</option><option>Urea (46% N)</option><option>AMS (21% N)</option><option>Other</option>
+        </select></div>
+      <div><label>Rate (lb N/acre)</label><input type="number" id="sd-rate" value="45" min="0" max="300"></div>
+    </div>
+  </div>
+  <div class="app-box">
+    <h3>Fertigation 1</h3>
+    <div class="row2">
+      <div><label>Product</label>
+        <select id="f1-prod">
+          <option selected>UAN 28%</option><option>UAN 32%</option>
+          <option>AMS (21% N)</option><option>Urea (46% N)</option><option>Other</option>
+        </select></div>
+      <div><label>Rate (lb N/acre)</label><input type="number" id="f1-rate" value="20" min="0" max="150"></div>
+    </div>
+  </div>
+  <div class="app-box">
+    <h3>Fertigation 2 <span style="font-weight:400;font-size:12px;color:#9ca3af">(optional)</span></h3>
+    <div class="row2">
+      <div><label>Product</label>
+        <select id="f2-prod">
+          <option selected>UAN 28%</option><option>UAN 32%</option>
+          <option>AMS (21% N)</option><option>Urea (46% N)</option><option>Other</option>
+        </select></div>
+      <div><label>Rate (lb N/acre)</label><input type="number" id="f2-rate" value="0" min="0" max="150"></div>
+    </div>
+  </div>
+  <div class="app-box">
+    <h3>Fertigation 3 <span style="font-weight:400;font-size:12px;color:#9ca3af">(optional)</span></h3>
+    <div class="row2">
+      <div><label>Product</label>
+        <select id="f3-prod">
+          <option selected>UAN 28%</option><option>UAN 32%</option>
+          <option>AMS (21% N)</option><option>Urea (46% N)</option><option>Other</option>
+        </select></div>
+      <div><label>Rate (lb N/acre)</label><input type="number" id="f3-rate" value="0" min="0" max="150"></div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Loss Factors</h2>
+  <label>Leaching / Over-Irrigation Events</label>
+  <div class="radio-group">
+    <label><input type="radio" name="leach" value="0"> None — 0% N loss</label>
+    <label><input type="radio" name="leach" value="1" checked> 1 event (&gt;1.5" rain or heavy over-irrigation) — 10% loss</label>
+    <label><input type="radio" name="leach" value="2"> 2+ events — 20% loss</label>
+  </div>
+  <div style="margin-top:14px">
+    <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer">
+      <input type="checkbox" id="saturated" style="width:auto">
+      <span>Saturated soils &gt;48 hours — adds 15% N loss</span>
+    </label>
+  </div>
+</div>
+
+<button class="calc-btn" onclick="calculate()">Calculate N Status</button>
+
+<div id="results">
+  <div id="banner" class="banner sufficient">
+    <div class="status-lbl" id="status-lbl">—</div>
+    <div class="big-num" id="big-num">—</div>
+    <div class="rec" id="rec-text"></div>
+    <div class="fert-rec" id="fert-rec"></div>
+  </div>
+
+  <div class="section">
+    <h2>Season N Demand Curve</h2>
+    <canvas id="curve" height="220"></canvas>
+  </div>
+
+  <div class="section">
+    <h2>N Budget Breakdown</h2>
+    <table>
+      <thead><tr><th>Item</th><th style="text-align:right">lb N/ac</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <button class="print-btn" onclick="window.print()">Print / Save PDF</button>
+  </div>
+
+  <div class="section" style="font-size:13px">
+    <h2>Science Basis</h2>
+    <p style="margin-bottom:8px">UNL Extension EC117 &nbsp;·&nbsp; ISU MRTN (Sawyer et al.) &nbsp;·&nbsp; Bender et al. 2013 (Agronomy Journal) &nbsp;·&nbsp; Ciampitti &amp; Vyn 2013 (Crop Science) &nbsp;·&nbsp; KSU MF-1005 &nbsp;·&nbsp; USDA-NRCS</p>
+    <p style="color:#6b7280">Estimates only. Consult a CCA for site-specific recommendations.</p>
+  </div>
+</div>
+
+<footer>Acre Insights &nbsp;·&nbsp; ryan@acreinsights.com</footer>
+</div>
+
+<script>
+var STAGES = [
+  {v:'VE-V3',l:'VE-V3',pct:5},{v:'V4-V6',l:'V4-V6',pct:10},
+  {v:'V7-V9',l:'V7-V9',pct:20},{v:'V10-V12',l:'V10-V12',pct:35},
+  {v:'V13-V15',l:'V13-V15',pct:55},{v:'V16-VT',l:'V16-VT',pct:70},
+  {v:'R1',l:'R1',pct:80},{v:'R2',l:'R2',pct:88},
+  {v:'R3',l:'R3',pct:94},{v:'R4',l:'R4',pct:98},
+  {v:'R5-R6',l:'R5-R6',pct:100}
+];
+
+function gv(id) { return document.getElementById(id); }
+function num(id) { return parseFloat(gv(id).value) || 0; }
+
+function calculate() {
+  var yg = num('yieldGoal');
+  var stageEl = gv('stage');
+  var stagePct = parseInt(stageEl.options[stageEl.selectedIndex].getAttribute('data-pct')) || 0;
+  var stageVal = stageEl.value;
+  var prevCrop = gv('prevCrop').value;
+  var om = num('om');
+  var ppRate = num('pp-rate');
+  var sdRate = num('sd-rate');
+  var f1 = num('f1-rate');
+  var f2 = num('f2-rate');
+  var f3 = num('f3-rate');
+  var leach = parseInt(document.querySelector('input[name=leach]:checked').value);
+  var sat = gv('saturated').checked;
+
+  var demand = yg * 1.1;
+  var omCredit = om * 20;
+  var prevCredit = prevCrop === 'soy' ? 50 : 0;
+  var appliedN = ppRate + sdRate + f1 + f2 + f3;
+  var lossPct = leach * 10 + (sat ? 15 : 0);
+  if (lossPct > 50) lossPct = 50;
+  var losses = appliedN * lossPct / 100;
+  var totalAvail = appliedN + omCredit + prevCredit - losses;
+  var uptakeToDate = demand * stagePct / 100;
+  var remaining = totalAvail - uptakeToDate;
+  var stillNeeded = demand * (1 - stagePct / 100);
+  var surplus = remaining - stillNeeded;
+
+  var cls, lbl, rec, fertRec = '';
+  if (surplus >= 30)       { cls='sufficient';  lbl='N Sufficient';         rec='N looks sufficient. No fertigation needed.'; }
+  else if (surplus >= 10)  { cls='marginal';    lbl='Marginal';             rec='N is marginal. Consider a light fertigation if corn is above $4.50/bu.'; fertRec='Suggested: 15-20 lb N/acre via UAN or AMS'; }
+  else if (surplus >= 0)   { cls='borderline';  lbl='Borderline Deficient'; rec='N is borderline deficient. Fertigation recommended.'; fertRec='Suggested: 20-30 lb N/acre via UAN or AMS'; }
+  else { cls='deficit'; lbl='N Deficient'; rec='Crop is N deficient. Fertigation strongly recommended.';
+    fertRec = 'Suggested: ' + Math.round(Math.abs(surplus)+15) + ' lb N/acre via UAN or AMS — apply ASAP'; }
+
+  var banner = gv('banner');
+  banner.className = 'banner ' + cls;
+  gv('status-lbl').textContent = lbl;
+  gv('big-num').textContent = (surplus >= 0 ? '+' : '') + surplus.toFixed(0) + ' lb N/acre';
+  gv('rec-text').textContent = rec;
+  gv('fert-rec').textContent = fertRec;
+  gv('fert-rec').style.display = fertRec ? '' : 'none';
+
+  var rows = [];
+  rows.push({l:'Total Crop N Demand', v:demand.toFixed(0), c:''});
+  if (prevCrop==='soy') rows.push({l:'Previous Crop Credit (Soy)', v:'+50', c:'cr'});
+  rows.push({l:'OM Mineralization', v:'+'+omCredit.toFixed(0), c:'cr'});
+  if (ppRate>0) rows.push({l:'Pre-plant', v:'+'+ppRate.toFixed(0), c:'cr'});
+  if (sdRate>0) rows.push({l:'Sidedress', v:'+'+sdRate.toFixed(0), c:'cr'});
+  if (f1>0) rows.push({l:'Fertigation 1', v:'+'+f1.toFixed(0), c:'cr'});
+  if (f2>0) rows.push({l:'Fertigation 2', v:'+'+f2.toFixed(0), c:'cr'});
+  if (f3>0) rows.push({l:'Fertigation 3', v:'+'+f3.toFixed(0), c:'cr'});
+  if (losses>0) rows.push({l:'N Losses', v:'-'+losses.toFixed(0), c:'db'});
+  rows.push({l:'Total N Available', v:totalAvail.toFixed(0), c:'', tot:true});
+  rows.push({l:'N Used by Crop', v:'-'+uptakeToDate.toFixed(0), c:'db'});
+  rows.push({l:'N Remaining', v:remaining.toFixed(0), c:''});
+  rows.push({l:'N Still Needed', v:'-'+stillNeeded.toFixed(0), c:'db'});
+  rows.push({l:'Surplus / (Deficit)', v:(surplus>=0?'+':'')+surplus.toFixed(0), c:surplus>=0?'cr':'db', tot:true});
+
+  var html = '';
+  for (var i=0; i<rows.length; i++) {
+    var r = rows[i];
+    var cls2 = r.tot ? ' class="tot"' : '';
+    var fw = r.tot ? 'font-weight:700;' : '';
+    var col = r.c==='cr' ? 'color:#2d6a2d' : r.c==='db' ? 'color:#c0392b' : '';
+    html += '<tr'+cls2+'><td style="'+fw+'">'+r.l+'</td><td style="text-align:right;'+fw+col+'">'+r.v+'</td></tr>';
+  }
+  gv('tbody').innerHTML = html;
+
+  gv('results').style.display = 'block';
+
+  drawChart(demand, totalAvail, stagePct, stageVal, surplus);
+
+  gv('results').scrollIntoView({behavior:'smooth'});
+}
+
+function drawChart(demand, totalAvail, stagePct, stageVal, surplus) {
+  var canvas = gv('curve');
+  var H = 220;
+  var W = canvas.offsetWidth || 300;
+  canvas.width = W; canvas.height = H;
+  var ctx = canvas.getContext('2d');
+  var P = {t:24, r:14, b:40, l:44};
+  var cw = W-P.l-P.r, ch = H-P.t-P.b;
+  var maxY = Math.ceil(Math.max(demand, Math.max(totalAvail,1))/50)*50+10;
+  var curIdx = 0;
+  for (var i=0; i<STAGES.length; i++) { if (STAGES[i].v===stageVal) { curIdx=i; break; } }
+  function xp(i){ return P.l+(i/(STAGES.length-1))*cw; }
+  function yp(v){ return P.t+ch-(v/maxY)*ch; }
+
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#f9fafb'; ctx.fillRect(P.l,P.t,cw,ch);
+
+  // Grid
+  ctx.strokeStyle='rgba(0,0,0,0.06)'; ctx.lineWidth=1;
+  for (var v=0; v<=maxY; v+=50) {
+    var gy=yp(v); ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+cw,gy); ctx.stroke();
+    ctx.fillStyle='#9ca3af'; ctx.font='10px system-ui'; ctx.textAlign='right';
+    ctx.fillText(v, P.l-4, gy+4);
+  }
+
+  var pts = [];
+  for (var i=0; i<STAGES.length; i++) pts.push({x:xp(i), y:yp(demand*STAGES[i].pct/100)});
+
+  // Green fill (taken up)
+  ctx.beginPath(); ctx.moveTo(pts[0].x,yp(0));
+  for (var i=0; i<=curIdx; i++) ctx.lineTo(pts[i].x,pts[i].y);
+  ctx.lineTo(pts[curIdx].x,yp(0)); ctx.closePath();
+  ctx.fillStyle='rgba(76,175,80,0.2)'; ctx.fill();
+
+  // Gray fill (remaining)
+  ctx.beginPath(); ctx.moveTo(pts[curIdx].x,yp(0));
+  for (var i=curIdx; i<STAGES.length; i++) ctx.lineTo(pts[i].x,pts[i].y);
+  ctx.lineTo(pts[STAGES.length-1].x,yp(0)); ctx.closePath();
+  ctx.fillStyle='rgba(180,180,180,0.12)'; ctx.fill();
+
+  // Demand curve
+  ctx.beginPath();
+  for (var i=0; i<pts.length; i++) { if(i===0) ctx.moveTo(pts[i].x,pts[i].y); else ctx.lineTo(pts[i].x,pts[i].y); }
+  ctx.strokeStyle='#2d6a2d'; ctx.lineWidth=2.5; ctx.setLineDash([]); ctx.stroke();
+
+  // Dots
+  for (var i=0; i<pts.length; i++) {
+    ctx.beginPath(); ctx.arc(pts[i].x,pts[i].y,3.5,0,Math.PI*2);
+    ctx.fillStyle=i<=curIdx?'#2d6a2d':'#bbb'; ctx.fill();
+  }
+
+  // N available line
+  var avY=yp(Math.max(0,totalAvail));
+  var avCol=surplus>=0?'#1565C0':'#c0392b';
+  ctx.beginPath(); ctx.moveTo(P.l,avY); ctx.lineTo(P.l+cw,avY);
+  ctx.strokeStyle=avCol; ctx.lineWidth=2.5; ctx.setLineDash([7,5]); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle=avCol; ctx.font='bold 9px system-ui'; ctx.textAlign='left';
+  ctx.fillText('N Avail: '+Math.round(totalAvail)+' lb/ac', P.l+3, avY-4);
+
+  // Current stage line
+  var cx=pts[curIdx].x;
+  ctx.beginPath(); ctx.moveTo(cx,P.t); ctx.lineTo(cx,P.t+ch);
+  ctx.strokeStyle='#f59e0b'; ctx.lineWidth=2; ctx.setLineDash([5,3]); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#f59e0b'; ctx.font='bold 9px system-ui'; ctx.textAlign='center';
+  ctx.fillText('Now',cx,P.t+ch+13);
+
+  // X labels
+  ctx.fillStyle='#9ca3af'; ctx.font='9px system-ui'; ctx.textAlign='center';
+  for (var i=0; i<STAGES.length; i++) {
+    if (i%2===0||i===curIdx) ctx.fillText(STAGES[i].l,pts[i].x,H-4);
+  }
+}
+</script>
+</body>
+</html>
