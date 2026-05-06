@@ -53,6 +53,10 @@ canvas{width:100%;border-radius:6px;background:#f9fafb;margin-top:4px;display:bl
 .leg-solid{display:inline-block;width:20px;height:3px;border-radius:2px;background:#1a56a0}
 .leg-dash{display:inline-block;width:20px;height:0;border-top:2.5px dashed rgba(26,86,160,0.5)}
 .leg-ring{display:inline-block;width:12px;height:12px;border:2.5px solid #1a56a0;border-radius:50%}
+#hist-table td{padding:6px 8px}
+#hist-table .yr-good{color:#2d6a2d;font-weight:700}
+#hist-table .yr-bad{color:#c0392b;font-weight:700}
+#hist-table tr.yr-yours{background:#fffbeb}
 .print-btn{font-size:13px;font-weight:700;padding:8px 16px;border-radius:8px;border:1.5px solid #d1d5db;background:#fff;cursor:pointer;margin-top:12px}
 footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
 </style>
@@ -195,6 +199,22 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
       <span class="leg-item" id="leg-bands" style="display:none"><span style="display:inline-block;width:20px;height:8px;background:rgba(100,120,150,0.18);border-radius:2px"></span> 50-yr range</span>
     </div>
     <div id="weather-status" style="display:none;font-size:11px;color:#9ca3af;margin-top:6px"></div>
+  </div>
+
+  <div class="section" id="hist-section" style="display:none">
+    <h2>50-Year Historical Detail <button id="hist-toggle" onclick="toggleHist()" style="font-size:11px;font-weight:600;padding:3px 10px;border:1.5px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;margin-left:8px;text-transform:none;letter-spacing:0">Show</button></h2>
+    <div id="hist-table-wrap" style="display:none;overflow-x:auto;margin-top:8px">
+      <table id="hist-table" style="font-size:12px">
+        <thead><tr>
+          <th>Year</th>
+          <th style="text-align:right">Rain Events<br><span style="font-weight:400;font-size:10px">&gt;1.5"</span></th>
+          <th style="text-align:right">Season Precip<br><span style="font-weight:400;font-size:10px">inches</span></th>
+          <th style="text-align:right" id="hist-th-cur">N Rem. Now<br><span style="font-weight:400;font-size:10px">lb/ac</span></th>
+          <th style="text-align:right">N Rem. VT<br><span style="font-weight:400;font-size:10px">lb/ac</span></th>
+        </tr></thead>
+        <tbody id="hist-tbody"></tbody>
+      </table>
+    </div>
   </div>
 
   <div class="section">
@@ -548,13 +568,16 @@ function _pctile(arr, p){
 
 function _simYear(demand, totalAvail, precipMm){
   var avail=totalAvail, satDays=0, prevDay=0, result=[];
+  var leachEvents=0, totalPrecipIn=0;
   for(var s=0;s<STAGES.length;s++){
     var dayEnd=_STAGE_DAYS_SIM[s];
     for(var day=prevDay;day<dayEnd&&day<precipMm.length;day++){
-      var p=(precipMm[day]||0)/25.4; // mm to inches
+      var p=(precipMm[day]||0)/25.4;
+      totalPrecipIn+=p;
       if(p>1.5){
         avail-=avail*Math.min(0.20,(p-1.5)*0.09);
         satDays=Math.min(satDays+2,6);
+        leachEvents++;
       } else {
         satDays=Math.max(0,satDays-1);
       }
@@ -564,6 +587,7 @@ function _simYear(demand, totalAvail, precipMm){
     prevDay=dayEnd;
     result.push(avail - demand*STAGES[s].pct/100);
   }
+  result._meta={leachEvents:leachEvents, totalPrecipIn:totalPrecipIn};
   return result;
 }
 
@@ -604,9 +628,13 @@ async function fetchWeatherBands(){
 
     // Simulate each year
     var demand=_chart.demand, totalAvail=_chart.totalAvail;
-    var allRem=[];
+    var allRem=[], yearRows=[];
     for(var yr in yearPrecip){
-      if(yearPrecip[yr].length>=100) allRem.push(_simYear(demand,totalAvail,yearPrecip[yr]));
+      if(yearPrecip[yr].length>=100){
+        var sim=_simYear(demand,totalAvail,yearPrecip[yr]);
+        allRem.push(sim);
+        yearRows.push({year:parseInt(yr), sim:sim, meta:sim._meta});
+      }
     }
     if(allRem.length<10)throw new Error('Not enough data');
 
@@ -622,14 +650,48 @@ async function fetchWeatherBands(){
     }
 
     _chart.bands=bands;
+    _chart.yearRows=yearRows;
+    _chart.curIdx2=_chart.curIdx;
     if(ws){ws.textContent='Historical range based on '+allRem.length+' years of weather data \u00b7 '+county+', '+state;}
     var lb=gv('leg-bands'); if(lb)lb.style.display='';
+    _renderHistTable();
     _render(1,-1,0);
     if(!_pulseRaf)_pulse();
   } catch(e){
     console.warn('Weather bands:',e.message);
     if(ws){ws.textContent='Weather history unavailable for this location.';ws.style.color='#f87171';}
   }
+}
+
+function _renderHistTable(){
+  var d=_chart; if(!d||!d.yearRows)return;
+  var rows=d.yearRows, curIdx=d.curIdx, userVal=d.remVals[curIdx], vtIdx=6;
+  // Sort by N remaining at current stage descending (best year first)
+  var sorted=rows.slice().sort(function(a,b){return b.sim[curIdx]-a.sim[curIdx];});
+  var html='';
+  for(var i=0;i<sorted.length;i++){
+    var r=sorted[i];
+    var nCur=Math.round(r.sim[curIdx]);
+    var nVT=Math.round(r.sim[vtIdx]);
+    var cls=nCur>=Math.round(userVal)?'yr-good':'yr-bad';
+    html+='<tr><td>'+r.year+'</td>'+
+      '<td style="text-align:right">'+r.meta.leachEvents+'</td>'+
+      '<td style="text-align:right">'+r.meta.totalPrecipIn.toFixed(1)+'"</td>'+
+      '<td style="text-align:right" class="'+cls+'">'+nCur+'</td>'+
+      '<td style="text-align:right">'+nVT+'</td>'+
+      '</tr>';
+  }
+  gv('hist-tbody').innerHTML=html;
+  // Update column header to show current stage name
+  var th=gv('hist-th-cur'); if(th) th.innerHTML='N Rem. '+STAGES[curIdx].l+'<br><span style="font-weight:400;font-size:10px">lb/ac</span>';
+  gv('hist-section').style.display='';
+}
+
+function toggleHist(){
+  var wrap=gv('hist-table-wrap'), btn=gv('hist-toggle');
+  var open=wrap.style.display==='none';
+  wrap.style.display=open?'':'none';
+  btn.textContent=open?'Hide':'Show';
 }
 </script>
 </body>
