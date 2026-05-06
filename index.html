@@ -354,21 +354,42 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
   var remVals=STAGES.map(function(s){return totalAvail-demand*s.pct/100;});
   var vtTarget=demand*0.20;
 
-  var maxY=Math.ceil(Math.max(totalAvail,demand)*1.06/50)*50;
-  var minY=Math.min(0,Math.floor(Math.min.apply(null,remVals)/50)*50-10);
+  // Staged N-remaining: line starts low and blips UP as each application hits the pool
+  var ppR=num('pp-rate'),sdR=num('sd-rate'),f1R=num('f1-rate'),f2R=num('f2-rate'),f3R=num('f3-rate');
+  var omCr=num('om')*20, prevCr=gv('prevCrop').value==='soy'?50:0;
+  var leachV=parseInt(document.querySelector('input[name=leach]:checked').value);
+  var lossP=Math.min(50,leachV*10+(gv('saturated').checked?15:0));
+  var lm=1-lossP/100;
+  // appPool[stageIdx] = net N added to pool at that stage
+  var appPool={0:(ppR+omCr+prevCr)*lm};
+  if(sdR>0)appPool[2]=sdR*lm;
+  if(f1R>0)appPool[3]=f1R*lm;
+  if(f2R>0)appPool[4]=f2R*lm;
+  if(f3R>0)appPool[5]=f3R*lm;
+  var stagPool=0;
+  var stagedRemVals=STAGES.map(function(s,i){if(appPool[i])stagPool+=appPool[i];return stagPool-demand*s.pct/100;});
+  // Markers for blip arrows (exclude pre-plant since it's the starting point)
+  var appMarkers=[];
+  if(sdR>0)appMarkers.push({idx:2,raw:sdR,label:'Sidedress'});
+  if(f1R>0)appMarkers.push({idx:3,raw:f1R,label:'Fert 1'});
+  if(f2R>0)appMarkers.push({idx:4,raw:f2R,label:'Fert 2'});
+  if(f3R>0)appMarkers.push({idx:5,raw:f3R,label:'Fert 3'});
+
+  var maxY=Math.ceil(Math.max(totalAvail,demand,stagedRemVals[0])*1.06/50)*50;
+  var minY=Math.min(0,Math.floor(Math.min.apply(null,stagedRemVals)/50)*50-10);
   var span=maxY-minY;
 
   function xp(i){return P.l+(i/(n-1))*cw;}
   function yp(v){return P.t+ch-((v-minY)/span)*ch;}
 
-  var rpts=STAGES.map(function(s,i){return{x:xp(i),y:yp(remVals[i])};});
+  var rpts=STAGES.map(function(s,i){return{x:xp(i),y:yp(stagedRemVals[i])};});
   var ok=surplus>=0;
   var lc=ok?'#1a56a0':'#c0392b';
   var lca=ok?'rgba(26,86,160,':'rgba(192,57,43,';
 
   if(_raf)cancelAnimationFrame(_raf);
   if(_pulseRaf)cancelAnimationFrame(_pulseRaf);
-  _chart={canvas:canvas,W:W,H:H,P:P,cw:cw,ch:ch,n:n,demand:demand,totalAvail:totalAvail,surplus:surplus,remVals:remVals,curIdx:curIdx,maxY:maxY,minY:minY,span:span,xp:xp,yp:yp,rpts:rpts,vtTarget:vtTarget,lc:lc,lca:lca,ok:ok};
+  _chart={canvas:canvas,W:W,H:H,P:P,cw:cw,ch:ch,n:n,demand:demand,totalAvail:totalAvail,surplus:surplus,remVals:remVals,stagedRemVals:stagedRemVals,appMarkers:appMarkers,appPool:appPool,curIdx:curIdx,maxY:maxY,minY:minY,span:span,xp:xp,yp:yp,rpts:rpts,vtTarget:vtTarget,lc:lc,lca:lca,ok:ok};
 
   var startTs=null, dur=1100;
   _raf=requestAnimationFrame(function step(ts){
@@ -468,6 +489,35 @@ function _render(prog, hover, prad){
     ctx.stroke(); ctx.shadowBlur=0;
   }
 
+  // Application blips — vertical arrows where N enters the pool
+  if(d.appMarkers && d.appPool){
+    var clipX=P.l+cw*prog;
+    d.appMarkers.forEach(function(m){
+      var x=xp(m.idx);
+      if(x>clipX+2)return; // not yet revealed by animation
+      var preVal=(d.stagedRemVals[m.idx]||0)-(d.appPool[m.idx]||0);
+      var postVal=d.stagedRemVals[m.idx]||0;
+      var preY=yp(preVal), postY=yp(postVal);
+      var isPast=m.idx<=curIdx;
+      var bc=isPast?'#2d6a2d':'rgba(45,106,45,0.45)';
+      // Vertical blip line
+      ctx.beginPath(); ctx.moveTo(x,preY); ctx.lineTo(x,postY);
+      ctx.strokeStyle=bc; ctx.lineWidth=2.5;
+      if(!isPast)ctx.setLineDash([3,2]);
+      ctx.shadowColor='rgba(45,106,45,0.4)'; ctx.shadowBlur=isPast?6:0;
+      ctx.stroke(); ctx.setLineDash([]); ctx.shadowBlur=0;
+      // Arrowhead pointing up
+      ctx.beginPath();
+      ctx.moveTo(x-5,postY+8); ctx.lineTo(x,postY); ctx.lineTo(x+5,postY+8);
+      ctx.strokeStyle=bc; ctx.lineWidth=2; ctx.stroke();
+      // Amount label above the pre-application point
+      ctx.fillStyle=bc; ctx.font='bold 9px system-ui'; ctx.textAlign='center';
+      ctx.fillText('+'+m.raw+' lb',x,preY+11);
+      ctx.font='8px system-ui'; ctx.fillStyle=isPast?'rgba(45,106,45,0.75)':'rgba(45,106,45,0.4)';
+      ctx.fillText(m.label,x,preY+21);
+    });
+  }
+
   ctx.restore();
 
   ctx.beginPath(); ctx.moveTo(rpts[curIdx].x,P.t); ctx.lineTo(rpts[curIdx].x,P.t+ch);
@@ -487,7 +537,7 @@ function _render(prog, hover, prad){
   ctx.beginPath(); ctx.arc(hx,hy,4,0,Math.PI*2); ctx.fillStyle=lc; ctx.fill();
 
   ctx.fillStyle=lc; ctx.font='bold 11px system-ui'; ctx.textAlign='left';
-  ctx.fillText(Math.round(remVals[curIdx])+' lb',P.l+cw+3,hy+4);
+  ctx.fillText(Math.round((d.stagedRemVals||d.remVals)[curIdx])+' lb',P.l+cw+3,hy+4);
 
   if(hover>=0&&hover!==curIdx){
     ctx.beginPath(); ctx.moveTo(rpts[hover].x,P.t); ctx.lineTo(rpts[hover].x,P.t+ch);
@@ -523,7 +573,7 @@ function _bindEvents(){
   function showTip(clientX, clientY, idx){
     if(_pulseRaf){cancelAnimationFrame(_pulseRaf);_pulseRaf=null;}
     _render(1,idx,0);
-    var v=d.remVals[idx], proj=idx>d.curIdx;
+    var v=(d.stagedRemVals||d.remVals)[idx], proj=idx>d.curIdx;
     var lbl=v>30?'Sufficient':v>10?'Marginal':v>0?'Borderline':'Deficient';
     var col=v>30?'#4ade80':v>10?'#fbbf24':v>0?'#f97316':'#f87171';
     var bandHtml='';
