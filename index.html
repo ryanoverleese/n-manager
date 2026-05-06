@@ -46,7 +46,13 @@ td{padding:8px;border-bottom:1px solid #f3f4f6}
 .cr{color:#2d6a2d}
 .db{color:#c0392b}
 .tot td{font-weight:700;background:#f9fafb;border-top:2px solid #e5e7eb}
-canvas{width:100%;border-radius:6px;background:#f9fafb;margin-top:4px;display:block}
+canvas{width:100%;border-radius:6px;background:#f9fafb;margin-top:4px;display:block;cursor:crosshair}
+#chart-tip{position:fixed;background:#1f2937;color:#fff;padding:9px 13px;border-radius:10px;font-size:12px;line-height:1.6;pointer-events:none;display:none;z-index:300;box-shadow:0 6px 24px rgba(0,0,0,0.35);min-width:140px}
+.chart-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:#6b7280;align-items:center}
+.leg-item{display:flex;align-items:center;gap:5px}
+.leg-solid{display:inline-block;width:20px;height:3px;border-radius:2px;background:#1a56a0}
+.leg-dash{display:inline-block;width:20px;height:0;border-top:2.5px dashed rgba(26,86,160,0.5)}
+.leg-ring{display:inline-block;width:12px;height:12px;border:2.5px solid #1a56a0;border-radius:50%}
 .print-btn{font-size:13px;font-weight:700;padding:8px 16px;border-radius:8px;border:1.5px solid #d1d5db;background:#fff;cursor:pointer;margin-top:12px}
 footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
 </style>
@@ -180,7 +186,12 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
 
   <div class="section">
     <h2>Season N Demand Curve</h2>
-    <canvas id="curve" height="220"></canvas>
+    <canvas id="curve" height="260"></canvas>
+    <div class="chart-legend">
+      <span class="leg-item"><span class="leg-solid"></span> N Remaining</span>
+      <span class="leg-item"><span class="leg-dash"></span> Projected</span>
+      <span class="leg-item"><span class="leg-ring"></span> You are here</span>
+    </div>
   </div>
 
   <div class="section">
@@ -199,6 +210,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
   </div>
 </div>
 
+<div id="chart-tip"></div>
 <footer>Acre Insights &nbsp;·&nbsp; ryan@acreinsights.com</footer>
 </div>
 
@@ -291,118 +303,209 @@ function calculate() {
   gv('results').scrollIntoView({behavior:'smooth'});
 }
 
-function drawChart(demand, totalAvail, stagePct, stageVal, surplus) {
-  var canvas = gv('curve');
-  var H = 240;
-  var W = canvas.offsetWidth || 300;
-  canvas.width = W; canvas.height = H;
-  var ctx = canvas.getContext('2d');
-  var P = {t:20, r:72, b:36, l:46};
-  var cw = W-P.l-P.r, ch = H-P.t-P.b;
+var _chart=null, _raf=null, _pulseRaf=null, _pulsePhase=0;
 
-  var curIdx = 0;
-  for (var i=0; i<STAGES.length; i++) { if (STAGES[i].v===stageVal) { curIdx=i; break; } }
+function _spline(ctx, pts, from, to){
+  ctx.moveTo(pts[from].x, pts[from].y);
+  for(var i=from; i<to; i++){
+    var p0=pts[Math.max(from,i-1)], p1=pts[i], p2=pts[i+1], p3=pts[Math.min(pts.length-1,i+2)];
+    ctx.bezierCurveTo(
+      p1.x+(p2.x-p0.x)/6, p1.y+(p2.y-p0.y)/6,
+      p2.x-(p3.x-p1.x)/6, p2.y-(p3.y-p1.y)/6,
+      p2.x, p2.y
+    );
+  }
+}
 
-  // N-remaining at each stage = totalAvail minus crop uptake so far
-  var remVals = [];
-  for (var i=0; i<STAGES.length; i++) remVals.push(totalAvail - demand*STAGES[i].pct/100);
+function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
+  var canvas=gv('curve');
+  var H=260, W=canvas.offsetWidth||320;
+  canvas.width=W; canvas.height=H;
+  var P={t:22,r:82,b:38,l:50};
+  var cw=W-P.l-P.r, ch=H-P.t-P.b;
+  var n=STAGES.length;
 
-  // VT/R1 is index 6 (R1 = 80%) — use as the target benchmark like Granular
-  var vtIdx = 6;
-  var vtTarget = demand * (1 - STAGES[vtIdx].pct/100); // remaining demand at VT = 20% of total
+  var curIdx=0;
+  for(var i=0;i<n;i++){if(STAGES[i].v===stageVal){curIdx=i;break;}}
 
-  var maxY = Math.ceil(Math.max(totalAvail, demand)*1.05/50)*50;
-  var minY = Math.min(0, Math.floor(Math.min.apply(null,remVals)/50)*50);
-  var span = maxY - minY;
+  var remVals=STAGES.map(function(s){return totalAvail-demand*s.pct/100;});
+  var vtTarget=demand*0.20;
 
-  function xp(i){ return P.l+(i/(STAGES.length-1))*cw; }
-  function yp(v){ return P.t+ch-((v-minY)/span)*ch; }
+  var maxY=Math.ceil(Math.max(totalAvail,demand)*1.06/50)*50;
+  var minY=Math.min(0,Math.floor(Math.min.apply(null,remVals)/50)*50-10);
+  var span=maxY-minY;
+
+  function xp(i){return P.l+(i/(n-1))*cw;}
+  function yp(v){return P.t+ch-((v-minY)/span)*ch;}
+
+  var rpts=STAGES.map(function(s,i){return{x:xp(i),y:yp(remVals[i])};});
+  var ok=surplus>=0;
+  var lc=ok?'#1a56a0':'#c0392b';
+  var lca=ok?'rgba(26,86,160,':'rgba(192,57,43,';
+
+  if(_raf)cancelAnimationFrame(_raf);
+  if(_pulseRaf)cancelAnimationFrame(_pulseRaf);
+  _chart={canvas:canvas,W:W,H:H,P:P,cw:cw,ch:ch,n:n,demand:demand,totalAvail:totalAvail,surplus:surplus,remVals:remVals,curIdx:curIdx,maxY:maxY,minY:minY,span:span,xp:xp,yp:yp,rpts:rpts,vtTarget:vtTarget,lc:lc,lca:lca,ok:ok};
+
+  var startTs=null, dur=1100;
+  _raf=requestAnimationFrame(function step(ts){
+    if(!startTs)startTs=ts;
+    var t=Math.min((ts-startTs)/dur,1);
+    var ease=1-Math.pow(1-t,3);
+    _render(ease,-1,0);
+    if(t<1)_raf=requestAnimationFrame(step);
+    else{_raf=null;_pulse();_bindEvents();}
+  });
+}
+
+function _render(prog, hover, prad){
+  var d=_chart; if(!d)return;
+  var ctx=d.canvas.getContext('2d');
+  var P=d.P, cw=d.cw, ch=d.ch, W=d.W, H=d.H, n=d.n;
+  var rpts=d.rpts, remVals=d.remVals, curIdx=d.curIdx;
+  var lc=d.lc, lca=d.lca, xp=d.xp, yp=d.yp;
 
   ctx.clearRect(0,0,W,H);
-  ctx.fillStyle='#f9fafb'; ctx.fillRect(P.l,P.t,cw,ch);
+  var bgG=ctx.createLinearGradient(0,P.t,0,P.t+ch);
+  bgG.addColorStop(0,'#eef2f7'); bgG.addColorStop(1,'#f8fafc');
+  ctx.fillStyle=bgG; ctx.fillRect(P.l,P.t,cw,ch);
 
-  // Zero line
-  var zy = yp(0);
-  ctx.beginPath(); ctx.moveTo(P.l,zy); ctx.lineTo(P.l+cw,zy);
-  ctx.strokeStyle='rgba(0,0,0,0.12)'; ctx.lineWidth=1; ctx.setLineDash([]); ctx.stroke();
-
-  // Grid lines
-  ctx.strokeStyle='rgba(0,0,0,0.06)'; ctx.lineWidth=1;
-  for (var v=minY; v<=maxY; v+=50) {
+  ctx.setLineDash([]);
+  for(var v=d.minY;v<=d.maxY;v+=50){
     var gy=yp(v);
-    ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+cw,gy); ctx.stroke();
-    ctx.fillStyle='#9ca3af'; ctx.font='10px system-ui'; ctx.textAlign='right';
-    ctx.fillText(v, P.l-4, gy+3);
+    ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+cw,gy);
+    ctx.strokeStyle='rgba(0,0,0,0.07)'; ctx.lineWidth=1; ctx.stroke();
+    ctx.fillStyle='#aab4bf'; ctx.font='10px system-ui'; ctx.textAlign='right';
+    ctx.fillText(v,P.l-4,gy+3);
   }
 
-  // VT/R1 N Target marker (dashed horizontal, like Granular)
-  var vtY = yp(vtTarget);
-  ctx.beginPath(); ctx.moveTo(xp(vtIdx),vtY); ctx.lineTo(P.l+cw,vtY);
-  ctx.strokeStyle='rgba(100,100,100,0.35)'; ctx.lineWidth=1; ctx.setLineDash([3,3]); ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle='#555'; ctx.font='bold 8px system-ui'; ctx.textAlign='left';
-  ctx.fillText('VT/R1 target', P.l+cw+3, vtY+3);
+  var zy=yp(0);
+  ctx.beginPath(); ctx.moveTo(P.l,zy); ctx.lineTo(P.l+cw,zy);
+  ctx.strokeStyle='rgba(0,0,0,0.18)'; ctx.lineWidth=1.5; ctx.stroke();
 
-  // N-remaining line points
-  var rpts = [];
-  for (var i=0; i<STAGES.length; i++) rpts.push({x:xp(i), y:yp(remVals[i])});
-
-  // Confidence band: curIdx → end, widening
-  var bandR = surplus>=0 ? 21 : 192;
-  var bandG = surplus>=0 ? 101 : 57;
-  var bandB = surplus>=0 ? 192 : 43;
-  ctx.beginPath();
-  ctx.moveTo(rpts[curIdx].x, rpts[curIdx].y);
-  for (var i=curIdx+1; i<STAGES.length; i++) {
-    var frac = (i-curIdx)/(STAGES.length-curIdx);
-    var spread = ch * 0.06 * frac;
-    ctx.lineTo(rpts[i].x, rpts[i].y - spread);
+  var vtIdx=6, vtY=yp(d.vtTarget);
+  if(vtY>=P.t&&vtY<=P.t+ch){
+    ctx.beginPath(); ctx.moveTo(xp(vtIdx),vtY); ctx.lineTo(P.l+cw,vtY);
+    ctx.strokeStyle='rgba(120,120,120,0.32)'; ctx.lineWidth=1; ctx.setLineDash([3,3]); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#999'; ctx.font='bold 8px system-ui'; ctx.textAlign='left';
+    ctx.fillText('VT/R1 min',P.l+cw+3,vtY+3);
   }
-  for (var i=STAGES.length-1; i>=curIdx; i--) {
-    var frac = (i-curIdx)/(STAGES.length-curIdx);
-    var spread = ch * 0.06 * frac;
-    ctx.lineTo(rpts[i].x, rpts[i].y + spread);
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(P.l-1,0,cw*prog+2,H); ctx.clip();
+
+  if(curIdx>0){
+    var fg=ctx.createLinearGradient(0,rpts[0].y,0,zy);
+    fg.addColorStop(0,lca+'0.28)'); fg.addColorStop(1,lca+'0.03)');
+    ctx.beginPath(); _spline(ctx,rpts,0,curIdx);
+    ctx.lineTo(rpts[curIdx].x,zy); ctx.lineTo(rpts[0].x,zy); ctx.closePath();
+    ctx.fillStyle=fg; ctx.fill();
   }
-  ctx.closePath();
-  ctx.fillStyle='rgba('+bandR+','+bandG+','+bandB+',0.12)'; ctx.fill();
 
-  // Solid line: stage 0 → curIdx (where we've been)
-  var lineCol = surplus>=0 ? '#1a56a0' : '#c0392b';
-  var lineColFade = surplus>=0 ? 'rgba(26,86,160,0.5)' : 'rgba(192,57,43,0.5)';
-  ctx.beginPath();
-  for (var i=0; i<=curIdx; i++) { if(i===0) ctx.moveTo(rpts[i].x,rpts[i].y); else ctx.lineTo(rpts[i].x,rpts[i].y); }
-  ctx.strokeStyle=lineCol; ctx.lineWidth=2.5; ctx.setLineDash([]); ctx.stroke();
+  if(curIdx<n-1){
+    ctx.beginPath(); ctx.moveTo(rpts[curIdx].x,rpts[curIdx].y);
+    for(var i=curIdx+1;i<n;i++){var f=(i-curIdx)/(n-1-curIdx),sp=ch*0.08*f; ctx.lineTo(rpts[i].x,rpts[i].y-sp);}
+    for(var i=n-1;i>=curIdx;i--){var f=(i-curIdx)/(n-1-curIdx),sp=ch*0.08*f; ctx.lineTo(rpts[i].x,rpts[i].y+sp);}
+    ctx.closePath(); ctx.fillStyle=lca+'0.11)'; ctx.fill();
+  }
 
-  // Dashed line: curIdx → end (projected)
-  ctx.beginPath();
-  for (var i=curIdx; i<STAGES.length; i++) { if(i===curIdx) ctx.moveTo(rpts[i].x,rpts[i].y); else ctx.lineTo(rpts[i].x,rpts[i].y); }
-  ctx.strokeStyle=lineColFade; ctx.lineWidth=2.5; ctx.setLineDash([8,5]); ctx.stroke();
-  ctx.setLineDash([]);
+  if(curIdx<n-1){
+    ctx.beginPath(); _spline(ctx,rpts,curIdx,n-1);
+    ctx.strokeStyle=lca+'0.48)'; ctx.lineWidth=2.5; ctx.setLineDash([8,5]);
+    ctx.shadowColor=lca+'0.3)'; ctx.shadowBlur=6;
+    ctx.stroke(); ctx.setLineDash([]); ctx.shadowBlur=0;
+  }
 
-  // ⊙ "you are here" — outer ring + inner dot
-  var hx=rpts[curIdx].x, hy=rpts[curIdx].y;
-  ctx.beginPath(); ctx.arc(hx,hy,9,0,Math.PI*2);
-  ctx.strokeStyle=lineCol; ctx.lineWidth=2.5; ctx.stroke();
-  ctx.beginPath(); ctx.arc(hx,hy,4,0,Math.PI*2);
-  ctx.fillStyle=lineCol; ctx.fill();
+  if(curIdx>0){
+    ctx.beginPath(); _spline(ctx,rpts,0,curIdx);
+    ctx.strokeStyle=lc; ctx.lineWidth=3;
+    ctx.shadowColor=lca+'0.6)'; ctx.shadowBlur=14;
+    ctx.stroke(); ctx.shadowBlur=0;
+  }
 
-  // Right-side: current lb value next to the ⊙
-  var curRem = remVals[curIdx];
-  ctx.fillStyle=lineCol; ctx.font='bold 10px system-ui'; ctx.textAlign='left';
-  ctx.fillText(Math.round(curRem)+' lb', P.l+cw+3, hy+3);
+  ctx.restore();
 
-  // "Now" vertical
-  ctx.beginPath(); ctx.moveTo(hx,P.t); ctx.lineTo(hx,P.t+ch);
-  ctx.strokeStyle='rgba(245,158,11,0.6)'; ctx.lineWidth=1.5; ctx.setLineDash([5,3]); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(rpts[curIdx].x,P.t); ctx.lineTo(rpts[curIdx].x,P.t+ch);
+  ctx.strokeStyle='rgba(245,158,11,0.55)'; ctx.lineWidth=1.5; ctx.setLineDash([5,3]); ctx.stroke();
   ctx.setLineDash([]);
   ctx.fillStyle='#f59e0b'; ctx.font='bold 9px system-ui'; ctx.textAlign='center';
-  ctx.fillText('Now',hx,P.t+ch+13);
+  ctx.fillText('Now',rpts[curIdx].x,P.t+ch+14);
 
-  // X-axis stage labels
-  ctx.fillStyle='#9ca3af'; ctx.font='9px system-ui'; ctx.textAlign='center';
-  for (var i=0; i<STAGES.length; i++) {
-    if (i%2===0||i===curIdx) ctx.fillText(STAGES[i].l,xp(i),H-4);
+  var hx=rpts[curIdx].x, hy=rpts[curIdx].y;
+  if(prad>0){
+    ctx.beginPath(); ctx.arc(hx,hy,prad,0,Math.PI*2);
+    ctx.strokeStyle=lca+Math.max(0,0.65-(prad-9)/18)+')'; ctx.lineWidth=2; ctx.stroke();
   }
+  ctx.beginPath(); ctx.arc(hx,hy,9,0,Math.PI*2);
+  ctx.strokeStyle=lc; ctx.lineWidth=2.5;
+  ctx.shadowColor=lca+'0.65)'; ctx.shadowBlur=10; ctx.stroke(); ctx.shadowBlur=0;
+  ctx.beginPath(); ctx.arc(hx,hy,4,0,Math.PI*2); ctx.fillStyle=lc; ctx.fill();
+
+  ctx.fillStyle=lc; ctx.font='bold 11px system-ui'; ctx.textAlign='left';
+  ctx.fillText(Math.round(remVals[curIdx])+' lb',P.l+cw+3,hy+4);
+
+  if(hover>=0&&hover!==curIdx){
+    ctx.beginPath(); ctx.moveTo(rpts[hover].x,P.t); ctx.lineTo(rpts[hover].x,P.t+ch);
+    ctx.strokeStyle='rgba(0,0,0,0.13)'; ctx.lineWidth=1; ctx.setLineDash([3,3]); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(rpts[hover].x,rpts[hover].y,5.5,0,Math.PI*2);
+    ctx.fillStyle='#fff'; ctx.fill(); ctx.strokeStyle=lc; ctx.lineWidth=2; ctx.stroke();
+  }
+
+  ctx.fillStyle='#9ca3af'; ctx.font='9px system-ui'; ctx.textAlign='center';
+  for(var i=0;i<n;i++){
+    if(i%2===0||i===curIdx) ctx.fillText(STAGES[i].l,rpts[i].x,H-4);
+  }
+}
+
+function _pulse(){
+  _pulsePhase+=0.055;
+  var r=9+4*Math.abs(Math.sin(_pulsePhase));
+  _render(1,-1,r);
+  _pulseRaf=requestAnimationFrame(_pulse);
+}
+
+function _bindEvents(){
+  var d=_chart; if(!d)return;
+  var canvas=d.canvas, tip=gv('chart-tip');
+
+  function nearest(px){
+    var bi=0,bd=1e9;
+    for(var i=0;i<d.n;i++){var dx=Math.abs(d.rpts[i].x-px);if(dx<bd){bd=dx;bi=i;}}
+    return bi;
+  }
+
+  function showTip(clientX, clientY, idx){
+    if(_pulseRaf){cancelAnimationFrame(_pulseRaf);_pulseRaf=null;}
+    _render(1,idx,0);
+    var v=d.remVals[idx], proj=idx>d.curIdx;
+    var lbl=v>30?'Sufficient':v>10?'Marginal':v>0?'Borderline':'Deficient';
+    var col=v>30?'#4ade80':v>10?'#fbbf24':v>0?'#f97316':'#f87171';
+    tip.innerHTML='<div style="font-weight:800;font-size:13px;margin-bottom:3px">'+STAGES[idx].l+'</div>'+
+      'N Remaining: <span style="color:'+d.lc+';font-weight:800">'+Math.round(v)+' lb/ac</span><br>'+
+      '<span style="color:'+col+';font-size:11px;font-weight:700">'+lbl+'</span>'+
+      (proj?'<div style="margin-top:3px;font-size:10px;opacity:0.55;font-style:italic">projected</div>':'');
+    tip.style.display='block';
+    var tw=tip.offsetWidth, th=tip.offsetHeight;
+    tip.style.left=Math.max(4,Math.min(clientX-tw/2,window.innerWidth-tw-4))+'px';
+    tip.style.top=(clientY-th-18)+'px';
+  }
+
+  function hideTip(){
+    tip.style.display='none';
+    _render(1,-1,0);
+    _pulse();
+  }
+
+  canvas.onmousemove=function(e){showTip(e.clientX,e.clientY,nearest(e.offsetX));};
+  canvas.onmouseleave=hideTip;
+  canvas.ontouchmove=function(e){
+    e.preventDefault();
+    var t=e.touches[0],rect=canvas.getBoundingClientRect();
+    showTip(t.clientX,t.clientY,nearest(t.clientX-rect.left));
+  };
+  canvas.ontouchend=hideTip;
 }
 </script>
 </body>
