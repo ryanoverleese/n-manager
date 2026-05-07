@@ -89,16 +89,16 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
   <input type="date" id="plantDate" value="2026-05-02">
   <label>Current Growth Stage</label>
   <select id="stage">
-    <option value="VE-V3" data-pct="5">VE – V3 (Emergence – 3-leaf)</option>
-    <option value="V4-V6" data-pct="10">V4 – V6 (4 to 6-leaf)</option>
-    <option value="V7-V9" data-pct="20">V7 – V9 (7 to 9-leaf)</option>
-    <option value="V10-V12" data-pct="35" selected>V10 – V12 (10 to 12-leaf)</option>
-    <option value="V13-V15" data-pct="55">V13 – V15 (13 to 15-leaf)</option>
-    <option value="V16-VT" data-pct="70">V16 – VT (to Tassel)</option>
-    <option value="R1" data-pct="80">R1 – Silking</option>
-    <option value="R2" data-pct="88">R2 – Blister</option>
-    <option value="R3" data-pct="94">R3 – Milk</option>
-    <option value="R4" data-pct="98">R4 – Dough</option>
+    <option value="VE-V3" data-pct="3">VE – V3 (Emergence – 3-leaf)</option>
+    <option value="V4-V6" data-pct="7">V4 – V6 (4 to 6-leaf)</option>
+    <option value="V7-V9" data-pct="14">V7 – V9 (7 to 9-leaf)</option>
+    <option value="V10-V12" data-pct="25" selected>V10 – V12 (10 to 12-leaf)</option>
+    <option value="V13-V15" data-pct="40">V13 – V15 (13 to 15-leaf)</option>
+    <option value="V16-VT" data-pct="52">V16 – VT (to Tassel)</option>
+    <option value="R1" data-pct="57">R1 – Silking</option>
+    <option value="R2" data-pct="70">R2 – Blister</option>
+    <option value="R3" data-pct="81">R3 – Milk</option>
+    <option value="R4" data-pct="91">R4 – Dough</option>
     <option value="R5-R6" data-pct="100">R5 – R6 (Dent to Black Layer)</option>
   </select>
 </div>
@@ -246,12 +246,14 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
 </div>
 
 <script>
+// N uptake curve based on Ciampitti & Vyn (2013) / Bender et al. for modern high-yield hybrids:
+// 43% post-VT/R1, 57% pre-VT — materially more post-silking demand than Hanway (1962) legacy curve
 var STAGES = [
-  {v:'VE-V3',l:'VE-V3',pct:5},{v:'V4-V6',l:'V4-V6',pct:10},
-  {v:'V7-V9',l:'V7-V9',pct:20},{v:'V10-V12',l:'V10-V12',pct:35},
-  {v:'V13-V15',l:'V13-V15',pct:55},{v:'V16-VT',l:'V16-VT',pct:70},
-  {v:'R1',l:'R1',pct:80},{v:'R2',l:'R2',pct:88},
-  {v:'R3',l:'R3',pct:94},{v:'R4',l:'R4',pct:98},
+  {v:'VE-V3',l:'VE-V3',pct:3},{v:'V4-V6',l:'V4-V6',pct:7},
+  {v:'V7-V9',l:'V7-V9',pct:14},{v:'V10-V12',l:'V10-V12',pct:25},
+  {v:'V13-V15',l:'V13-V15',pct:40},{v:'V16-VT',l:'V16-VT',pct:52},
+  {v:'R1',l:'R1',pct:57},{v:'R2',l:'R2',pct:70},
+  {v:'R3',l:'R3',pct:81},{v:'R4',l:'R4',pct:91},
   {v:'R5-R6',l:'R5-R6',pct:100}
 ];
 
@@ -362,7 +364,7 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
   for(var i=0;i<n;i++){if(STAGES[i].v===stageVal){curIdx=i;break;}}
 
   var remVals=STAGES.map(function(s){return totalAvail-demand*s.pct/100;});
-  var vtTarget=demand*0.20;
+  var vtTarget=demand*0.43; // 43% post-VT uptake — Ciampitti & Vyn (2013), modern hybrids
 
   // Staged N-remaining: line starts low and blips UP as each application hits the pool
   var ppR=num('pp-rate'),sdR=num('sd-rate'),f1R=num('f1-rate'),f2R=num('f2-rate'),f3R=num('f3-rate');
