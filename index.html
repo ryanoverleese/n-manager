@@ -343,7 +343,9 @@ function _spline(ctx, pts, from, to){
 function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
   var canvas=gv('curve');
   var H=280, W=canvas.offsetWidth||320;
-  canvas.width=W; canvas.height=H;
+  var dpr=window.devicePixelRatio||1;
+  canvas.width=W*dpr; canvas.height=H*dpr;
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
   var P={t:22,r:82,b:38,l:50};
   var cw=W-P.l-P.r, ch=H-P.t-P.b;
   var n=STAGES.length;
@@ -389,7 +391,7 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
 
   if(_raf)cancelAnimationFrame(_raf);
   if(_pulseRaf)cancelAnimationFrame(_pulseRaf);
-  _chart={canvas:canvas,W:W,H:H,P:P,cw:cw,ch:ch,n:n,demand:demand,totalAvail:totalAvail,surplus:surplus,remVals:remVals,stagedRemVals:stagedRemVals,appMarkers:appMarkers,appPool:appPool,curIdx:curIdx,maxY:maxY,minY:minY,span:span,xp:xp,yp:yp,rpts:rpts,vtTarget:vtTarget,lc:lc,lca:lca,ok:ok};
+  _chart={canvas:canvas,W:W,H:H,P:P,cw:cw,ch:ch,n:n,demand:demand,totalAvail:totalAvail,surplus:surplus,remVals:remVals,stagedRemVals:stagedRemVals,appMarkers:appMarkers,appPool:appPool,curIdx:curIdx,maxY:maxY,minY:minY,span:span,xp:xp,yp:yp,rpts:rpts,vtTarget:vtTarget,lc:lc,lca:lca,ok:ok,dpr:dpr};
 
   var startTs=null, dur=1100;
   _raf=requestAnimationFrame(function step(ts){
@@ -408,8 +410,10 @@ function _render(prog, hover, prad){
   var P=d.P, cw=d.cw, ch=d.ch, W=d.W, H=d.H, n=d.n;
   var rpts=d.rpts, remVals=d.remVals, curIdx=d.curIdx;
   var lc=d.lc, lca=d.lca, xp=d.xp, yp=d.yp;
+  var dpr=d.dpr||1;
 
-  ctx.clearRect(0,0,W,H);
+  ctx.clearRect(0,0,W*dpr,H*dpr);
+  ctx.save(); ctx.scale(dpr,dpr);
   var bgG=ctx.createLinearGradient(0,P.t,0,P.t+ch);
   bgG.addColorStop(0,'#eef2f7'); bgG.addColorStop(1,'#f8fafc');
   ctx.fillStyle=bgG; ctx.fillRect(P.l,P.t,cw,ch);
@@ -612,6 +616,8 @@ function _render(prog, hover, prad){
   for(var i=0;i<n;i++){
     if(i%2===0||i===curIdx) ctx.fillText(STAGES[i].l,rpts[i].x,H-4);
   }
+
+  ctx.restore();
 }
 
 function _pulse(){
