@@ -194,10 +194,19 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
     <canvas id="curve" height="260"></canvas>
     <div class="chart-legend">
       <span class="leg-item"><span class="leg-solid"></span> N Remaining</span>
-      <span class="leg-item"><span class="leg-dash"></span> Projected</span>
+      <span class="leg-item"><span class="leg-dash"></span> Planned apps</span>
       <span class="leg-item" id="leg-bands" style="display:none"><span style="display:inline-block;width:20px;height:8px;background:rgba(100,120,150,0.18);border-radius:2px"></span> 50-yr range</span>
     </div>
     <div id="weather-status" style="display:none;font-size:11px;color:#9ca3af;margin-top:6px"></div>
+    <div id="vt-outlook" style="display:none;margin-top:10px;padding:10px 12px;background:#f0f4ff;border-radius:8px;border:1px solid #dbe4f7">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;margin-bottom:6px">VT/R1 Outlook — The Only Benchmark That Matters</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+        <div><span style="font-size:11px;color:#6b7280">Planned N at VT</span><br><strong id="vto-planned" style="font-size:16px;color:#1a56a0">—</strong></div>
+        <div><span style="font-size:11px;color:#6b7280">Min needed</span><br><strong id="vto-min" style="font-size:16px;color:#6b7280">—</strong></div>
+        <div><span style="font-size:11px;color:#6b7280">Surplus / Deficit</span><br><strong id="vto-surplus" style="font-size:16px">—</strong></div>
+        <div id="vto-stress-wrap" style="display:none"><span style="font-size:11px;color:#6b7280">Bad year (10th pct)</span><br><strong id="vto-stress" style="font-size:16px">—</strong></div>
+      </div>
+    </div>
   </div>
 
   <div class="section" id="hist-section" style="display:none">
@@ -387,6 +396,22 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
   var ok=surplus>=0;
   var lc=ok?'#1a56a0':'#c0392b';
   var lca=ok?'rgba(26,86,160,':'rgba(192,57,43,';
+
+  // VT Outlook panel — the only benchmark that matters
+  var vtPlanned=Math.round(stagedRemVals[6]||0);
+  var vtMin=Math.round(vtTarget||0);
+  var vtSurp=vtPlanned-vtMin;
+  var vtoEl=gv('vt-outlook');
+  if(vtoEl){
+    vtoEl.style.display='block';
+    gv('vto-planned').textContent=vtPlanned+' lb/ac';
+    gv('vto-min').textContent=vtMin+' lb/ac';
+    var surpEl=gv('vto-surplus');
+    surpEl.textContent=(vtSurp>=0?'+':'')+vtSurp+' lb/ac';
+    surpEl.style.color=vtSurp>=0?'#16a34a':'#dc2626';
+    vtoEl.style.borderColor=vtSurp>=0?'#bbf7d0':'#fecaca';
+    vtoEl.style.background=vtSurp>=0?'#f0fdf4':'#fff5f5';
+  }
 
   if(_raf)cancelAnimationFrame(_raf);
   _chart={canvas:canvas,W:W,H:H,P:P,cw:cw,ch:ch,n:n,demand:demand,totalAvail:totalAvail,surplus:surplus,remVals:remVals,stagedRemVals:stagedRemVals,appMarkers:appMarkers,appPool:appPool,curIdx:curIdx,maxY:maxY,minY:minY,span:span,xp:xp,yp:yp,rpts:rpts,vtTarget:vtTarget,lc:lc,lca:lca,ok:ok,dpr:dpr};
@@ -598,8 +623,17 @@ function _render(prog, hover){
   ctx.fillText('Now',rpts[curIdx].x,P.t+ch+14);
 
 
-  ctx.fillStyle=lc; ctx.font='bold 11px system-ui'; ctx.textAlign='left';
-  ctx.fillText(Math.round((d.stagedRemVals||d.remVals)[curIdx])+' lb',P.l+cw+3,hy+4);
+  // VT projected label on right axis — the only benchmark that matters
+  var vtIdx=6;
+  var vtProjected=d.stagedRemVals[vtIdx]||0;
+  var vtMin=d.vtTarget||0;
+  var vtSurplus=Math.round(vtProjected-vtMin);
+  var vtColor=vtSurplus>=0?'#1a56a0':'#c0392b';
+  var vtLabelY=yp(vtProjected);
+  ctx.fillStyle=vtColor; ctx.font='bold 10px system-ui'; ctx.textAlign='left';
+  ctx.fillText(Math.round(vtProjected)+' lb',P.l+cw+3,vtLabelY+3);
+  ctx.fillStyle=vtSurplus>=0?'#4ade80':'#f87171'; ctx.font='bold 9px system-ui';
+  ctx.fillText((vtSurplus>=0?'+':'')+vtSurplus+' vs min',P.l+cw+3,vtLabelY+14);
 
   if(hover>=0&&hover!==curIdx){
     ctx.beginPath(); ctx.moveTo(rpts[hover].x,P.t); ctx.lineTo(rpts[hover].x,P.t+ch);
@@ -781,6 +815,15 @@ async function fetchWeatherBands(){
     _chart.curIdx2=_chart.curIdx;
     if(ws){ws.textContent='Historical range based on '+allRem.length+' years of weather data \u00b7 '+county+', '+state;}
     var lb=gv('leg-bands'); if(lb)lb.style.display='';
+    // Update VT outlook with weather stress test
+    var vtStress=Math.round(bands.p10[6]||0);
+    var vtMin2=Math.round(_chart.vtTarget||0);
+    var stressEl=gv('vto-stress'), stressWrap=gv('vto-stress-wrap');
+    if(stressEl&&stressWrap){
+      stressWrap.style.display='';
+      stressEl.textContent=vtStress+' lb/ac';
+      stressEl.style.color=vtStress>=vtMin2?'#16a34a':'#dc2626';
+    }
     _renderHistTable();
     _render(1,-1);
   } catch(e){
