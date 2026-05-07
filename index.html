@@ -76,7 +76,8 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
     <div><label>Field Name</label><input type="text" id="fieldName" value="John Doe — North Pivot"></div>
     <div><label>County</label><input type="text" id="county" value="Kearney" placeholder="e.g. Kearney"></div>
     <div><label>State</label><input type="text" id="state" value="Nebraska" placeholder="e.g. Nebraska"></div>
-    <div><label>Yield Goal (bu/acre)</label><input type="number" id="yieldGoal" value="230" min="100" max="400"><div class="hint">N demand = yield × 1.0 lb N/bu</div></div>
+    <div><label>Yield Goal (bu/acre)</label><input type="number" id="yieldGoal" value="230" min="100" max="400"></div>
+    <div><label>N Factor (lb N/bu)</label><input type="number" id="nFactor" value="1.1" min="0.7" max="1.5" step="0.05"><div class="hint">Ciampitti modern hybrids ≈ 1.1 · Hanway legacy ≈ 1.0</div></div>
     <div><label>Soil OM (%)</label><input type="number" id="om" value="2.8" min="0.5" max="8" step="0.1"><div class="hint">OM × 20 = lb N/acre credit</div></div>
   </div>
   <label>Previous Crop</label>
@@ -275,7 +276,8 @@ function calculate() {
   var leach = parseInt(document.querySelector('input[name=leach]:checked').value);
   var sat = gv('saturated').checked;
 
-  var demand = yg * 1.1;
+  var nFactor = Math.max(0.7, Math.min(1.5, num('nFactor') || 1.1));
+  var demand = yg * nFactor;
   var omCredit = om * 20;
   var prevCredit = prevCrop === 'soy' ? 50 : 0;
   var appliedN = ppRate + sdRate + f1 + f2 + f3;
