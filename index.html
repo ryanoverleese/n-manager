@@ -11,7 +11,7 @@ header h1{font-size:18px;margin:0}
 header p{font-size:13px;opacity:.8;margin:4px 0 0}
 .wrap{max-width:640px;margin:0 auto;padding:16px}
 .section{background:#fff;border:1px solid #d1d5db;border-radius:10px;padding:16px;margin-bottom:14px}
-.section h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:#6b7280;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid #eee}
+.section h2{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#374151;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid #e5e7eb}
 label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;margin-top:12px}
 label:first-child{margin-top:0}
 input,select{width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:15px;color:#1f2937;background:#fff;box-sizing:border-box}
@@ -50,7 +50,7 @@ td{padding:8px;border-bottom:1px solid #f3f4f6}
 .tot td{font-weight:700;background:#f9fafb;border-top:2px solid #e5e7eb}
 canvas{width:100%;border-radius:6px;background:#f9fafb;margin-top:4px;display:block;cursor:crosshair}
 #chart-tip{position:fixed;background:#1f2937;color:#fff;padding:9px 13px;border-radius:10px;font-size:12px;line-height:1.6;pointer-events:none;display:none;z-index:300;box-shadow:0 6px 24px rgba(0,0,0,0.35);min-width:140px}
-.chart-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:#6b7280;align-items:center}
+.chart-legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:#6b7280;align-items:center}
 .leg-item{display:flex;align-items:center;gap:5px}
 .leg-solid{display:inline-block;width:20px;height:3px;border-radius:2px;background:#1a56a0}
 .leg-dash{display:inline-block;width:20px;height:0;border-top:2.5px dashed rgba(26,86,160,0.5)}
@@ -93,6 +93,16 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
       </div>
     </div>
     <div><label>Soil OM (%)</label><input type="number" id="om" value="2.8" min="0.5" max="8" step="0.1"><div class="hint">OM × 20 = lb N/acre credit</div></div>
+    <div>
+      <label>Soil Texture</label>
+      <select id="soilTexture" onchange="calculate()">
+        <option value="sand">Sandy / Loamy Sand</option>
+        <option value="sandyLoam">Sandy Loam</option>
+        <option value="loam" selected>Loam / Silt Loam</option>
+        <option value="clayLoam">Clay Loam</option>
+        <option value="clay">Clay</option>
+      </select>
+    </div>
   </div>
   <label>Previous Crop</label>
   <select id="prevCrop">
@@ -206,7 +216,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
 
   <div class="section">
     <h2>Season N Demand Curve <button onclick="openChartFullscreen()" style="float:right;background:none;border:1.5px solid #d1d5db;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:13px;color:#6b7280;line-height:1" title="Fullscreen landscape">⛶</button></h2>
-    <canvas id="curve" height="260"></canvas>
+    <canvas id="curve" height="340"></canvas>
     <div class="chart-legend">
       <span class="leg-item"><span class="leg-solid"></span> N Remaining</span>
       <span class="leg-item"><span class="leg-dash"></span> Planned apps</span>
@@ -214,13 +224,25 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
     </div>
     <div id="app-legend" style="display:none;margin-top:8px;display:flex;gap:12px;flex-wrap:wrap"></div>
     <div id="weather-status" style="display:none;font-size:11px;color:#9ca3af;margin-top:6px"></div>
-    <div id="vt-outlook" style="display:none;margin-top:10px;padding:10px 12px;background:#f0f4ff;border-radius:8px;border:1px solid #dbe4f7">
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;margin-bottom:6px">VT/R1 Outlook — The Only Benchmark That Matters</div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
-        <div><span style="font-size:11px;color:#6b7280">Planned N at VT</span><br><strong id="vto-planned" style="font-size:16px;color:#1a56a0">—</strong></div>
-        <div><span style="font-size:11px;color:#6b7280">Min needed</span><br><strong id="vto-min" style="font-size:16px;color:#6b7280">—</strong></div>
-        <div><span style="font-size:11px;color:#6b7280">Surplus / Deficit</span><br><strong id="vto-surplus" style="font-size:16px">—</strong></div>
-        <div id="vto-stress-wrap" style="display:none"><span style="font-size:11px;color:#6b7280">Bad year (10th pct)</span><br><strong id="vto-stress" style="font-size:16px">—</strong></div>
+    <div id="vt-outlook" style="display:none;margin-top:14px;padding:16px 18px;background:#f0fdf4;border-radius:10px;border:1px solid #bbf7d0;border-left:5px solid #16a34a">
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.09em;color:#6b7280;margin-bottom:12px">VT/R1 Outlook — The Only Benchmark That Matters</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1.3fr 1fr;gap:6px;align-items:start">
+        <div>
+          <div style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px">Planned N at VT</div>
+          <div id="vto-planned" style="font-size:22px;font-weight:800;color:#1a56a0;line-height:1">—</div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px">Min needed</div>
+          <div id="vto-min" style="font-size:22px;font-weight:800;color:#6b7280;line-height:1">—</div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px">Surplus / Deficit</div>
+          <div id="vto-surplus" style="font-size:28px;font-weight:800;line-height:1">—</div>
+        </div>
+        <div id="vto-stress-wrap" style="display:none">
+          <div style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px">Worst-case year</div>
+          <div id="vto-stress" style="font-size:22px;font-weight:800;line-height:1">—</div>
+        </div>
       </div>
     </div>
     <div id="n-loss-breakdown" style="display:none;margin-top:10px;padding:10px 12px;background:#fafafa;border-radius:8px;border:1px solid #e5e7eb"></div>
@@ -234,7 +256,8 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
         <strong>Denitrification</strong> — After 3+ consecutive days of saturated soil, soil bacteria convert NO₃ to gas in the absence of oxygen, losing an estimated 2.5% of available N per day.<br><br>
         <strong>N uptake curve</strong> — Ciampitti &amp; Vyn (2013): 43% of total N uptake occurs after VT in modern high-yield hybrids. Pre-VT distribution follows the same research.<br><br>
         <strong>VT minimum</strong> — 43% of total seasonal N demand must be available at VT/R1 to complete grain fill.<br><br>
-        <strong>50-year weather bands</strong> — Open-Meteo historical daily precipitation for your county, 1973–present, run through the same leaching and denitrification model. Bands show 10th, 25th, 50th, 75th, and 90th percentile outcomes across all years.
+        <strong>Soil texture</strong> — adjusts leaching and denitrification thresholds. Sandy soils start leaching at 0.75" rain events with up to 35% N loss per event; clay soils require 2.5" before leaching occurs with only 8% max loss. Denitrification rate and trigger also scale with texture.<br><br>
+        <strong>50-year weather bands</strong> — Open-Meteo historical daily precipitation for your county, 1973–present, run through the same leaching and denitrification model using your selected soil texture. Bands show 10th, 25th, 50th, 75th, and 90th percentile outcomes across all years.
       </div>
     </div>
   </div>
@@ -276,6 +299,20 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
 </div>
 
 <script>
+// Soil texture → leaching & denitrification parameters
+// leachThresh: rain (in) above which leaching starts
+// leachMax: max fraction of available N lost per leaching event
+// leachRate: scaling factor (lost = min(leachMax, (p-thresh)*leachRate) * avail)
+// denitrDays: consecutive sat-days to trigger denitrification
+// denitrRate: fraction of avail N lost per denitrification day
+var TEXTURES = {
+  sand:     {leachThresh:0.75, leachMax:0.35, leachRate:0.15, denitrDays:4, denitrRate:0.015},
+  sandyLoam:{leachThresh:1.0,  leachMax:0.25, leachRate:0.11, denitrDays:3, denitrRate:0.020},
+  loam:     {leachThresh:1.5,  leachMax:0.20, leachRate:0.09, denitrDays:3, denitrRate:0.025},
+  clayLoam: {leachThresh:2.0,  leachMax:0.12, leachRate:0.06, denitrDays:2, denitrRate:0.035},
+  clay:     {leachThresh:2.5,  leachMax:0.08, leachRate:0.04, denitrDays:2, denitrRate:0.045}
+};
+
 // N uptake curve based on Ciampitti & Vyn (2013) / Bender et al. for modern high-yield hybrids:
 // 43% post-VT/R1, 57% pre-VT — materially more post-silking demand than Hanway (1962) legacy curve
 var STAGES = [
@@ -383,11 +420,11 @@ function _spline(ctx, pts, from, to){
 
 function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
   var canvas=gv('curve');
-  var H=280, W=canvas.offsetWidth||320;
+  var H=360, W=canvas.offsetWidth||320;
   var dpr=window.devicePixelRatio||1;
   canvas.width=W*dpr; canvas.height=H*dpr;
   canvas.style.width=W+'px'; canvas.style.height=H+'px';
-  var P={t:22,r:82,b:38,l:50};
+  var P={t:22,r:88,b:58,l:50};
   var cw=W-P.l-P.r, ch=H-P.t-P.b;
   var n=STAGES.length;
 
@@ -429,7 +466,7 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
     legEl.style.display=appMarkers.length?'flex':'none';
   }
 
-  var maxY=Math.ceil(Math.max(totalAvail,demand,stagedRemVals[0])*1.06/50)*50;
+  var maxY=Math.ceil((stagedRemVals[0]+35)/10)*10; // tight ceiling: ~35lb above start
   var minY=-10; // floor at -10; below zero is already deficient, no need for scale depth
   var span=maxY-minY;
 
@@ -454,6 +491,7 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
     surpEl.textContent=(vtSurp>=0?'+':'')+vtSurp+' lb/ac';
     surpEl.style.color=vtSurp>=0?'#16a34a':'#dc2626';
     vtoEl.style.borderColor=vtSurp>=0?'#bbf7d0':'#fecaca';
+    vtoEl.style.borderLeftColor=vtSurp>=0?'#16a34a':'#dc2626';
     vtoEl.style.background=vtSurp>=0?'#f0fdf4':'#fff5f5';
   }
 
@@ -587,13 +625,13 @@ function _render(prog, hover){
     _getSegs(0,curIdx).forEach(function(seg){
       if(seg.pts.length<2)return;
       ctx.beginPath(); _spline(ctx,seg.pts,0,seg.pts.length-1);
-      ctx.strokeStyle=lc; ctx.lineWidth=3;
-      ctx.shadowColor=lca+'0.6)'; ctx.shadowBlur=14;
+      ctx.strokeStyle=lc; ctx.lineWidth=3.5;
+      ctx.shadowColor=lca+'0.7)'; ctx.shadowBlur=18;
       ctx.stroke(); ctx.shadowBlur=0;
       if(seg.jx!==null){
         ctx.beginPath(); ctx.moveTo(seg.jx,seg.jFrom); ctx.lineTo(seg.jx,seg.jTo);
-        ctx.strokeStyle=lc; ctx.lineWidth=3;
-        ctx.shadowColor=lca+'0.6)'; ctx.shadowBlur=14;
+        ctx.strokeStyle=lc; ctx.lineWidth=3.5;
+        ctx.shadowColor=lca+'0.7)'; ctx.shadowBlur=18;
         ctx.stroke(); ctx.shadowBlur=0;
       }
     });
@@ -606,34 +644,33 @@ function _render(prog, hover){
       var x=xp(m.idx);
       if(x>clipX+2)return;
       var isPast=m.idx<=curIdx;
-      var bc=isPast?'#2d6a2d':'rgba(45,106,45,0.45)';
-      var cy=P.t+ch+18;
-      ctx.beginPath(); ctx.arc(x,cy,9,0,Math.PI*2);
+      var bc=isPast?'#2d6a2d':'rgba(45,106,45,0.38)';
+      var cy=P.t+ch+26;
+      ctx.beginPath(); ctx.arc(x,cy,10,0,Math.PI*2);
       ctx.fillStyle=bc; ctx.fill();
-      ctx.fillStyle='#fff'; ctx.font='bold 10px system-ui'; ctx.textAlign='center';
-      ctx.fillText(mi+1, x, cy+3.5);
+      ctx.fillStyle='#fff'; ctx.font='bold 11px system-ui'; ctx.textAlign='center';
+      ctx.fillText(mi+1, x, cy+4);
     });
   }
 
   // Rainfall strips along top — thin bars growing downward from top edge
   if(d.stagePrecip){
-    var stripMax=14; // max strip height in px
+    var stripMax=22; // max strip height in px
     var maxP=Math.max.apply(null,d.stagePrecip.map(function(v){return v||0;}))||1;
     for(var i=0;i<d.stagePrecip.length;i++){
       var p=d.stagePrecip[i]||0; if(p<=0)continue;
-      var barW=Math.max(4,(cw/(n-1))*0.7);
-      var bh2=Math.max(2,stripMax*(p/maxP));
+      var barW=Math.max(5,(cw/(n-1))*0.65);
+      var bh2=Math.max(3,stripMax*(p/maxP));
       var bx3=xp(i)-barW/2;
-      ctx.fillStyle=i<=curIdx?'rgba(59,130,246,0.5)':'rgba(59,130,246,0.18)';
-      ctx.fillRect(bx3, P.t, barW, bh2);
-      // Inch label on tallest bars
-      if(p>=maxP*0.5){
-        ctx.fillStyle='rgba(59,130,246,0.75)'; ctx.font='bold 8px system-ui'; ctx.textAlign='center';
-        ctx.fillText(p.toFixed(1)+'"', xp(i), P.t+bh2+8);
-      }
+      ctx.fillStyle=i<=curIdx?'rgba(59,130,246,0.62)':'rgba(59,130,246,0.22)';
+      ctx.fillRect(bx3, P.t+2, barW, bh2);
+      // Always label bars
+      ctx.fillStyle=i<=curIdx?'rgba(37,99,235,0.85)':'rgba(59,130,246,0.55)';
+      ctx.font='bold 8px system-ui'; ctx.textAlign='center';
+      ctx.fillText(p.toFixed(1)+'"', xp(i), P.t+bh2+12);
     }
-    ctx.fillStyle='rgba(59,130,246,0.55)'; ctx.font='8px system-ui'; ctx.textAlign='right';
-    ctx.fillText('Rain',P.l-2,P.t+10);
+    ctx.fillStyle='rgba(59,130,246,0.6)'; ctx.font='700 8px system-ui'; ctx.textAlign='right';
+    ctx.fillText('Rain',P.l-3,P.t+10);
   }
 
   ctx.restore();
@@ -667,7 +704,7 @@ function _render(prog, hover){
 
   ctx.fillStyle='#9ca3af'; ctx.font='9px system-ui'; ctx.textAlign='center';
   for(var i=0;i<n;i++){
-    if(i%2===0||i===curIdx) ctx.fillText(STAGES[i].l,rpts[i].x,H-4);
+    if(i%2===0||i===curIdx) ctx.fillText(STAGES[i].l,rpts[i].x,H-6);
   }
 
   ctx.restore();
@@ -729,7 +766,8 @@ function _pctile(arr, p){
   return s[idx];
 }
 
-function _simYear(demand, totalAvail, precipMm){
+function _simYear(demand, totalAvail, precipMm, tex){
+  var t=tex||TEXTURES.loam;
   var avail=totalAvail, satDays=0, prevDay=0, result=[];
   var leachEvents=0, leachLoss=0, denitrLoss=0, totalPrecipIn=0;
   for(var s=0;s<STAGES.length;s++){
@@ -737,8 +775,8 @@ function _simYear(demand, totalAvail, precipMm){
     for(var day=prevDay;day<dayEnd&&day<precipMm.length;day++){
       var p=(precipMm[day]||0)/25.4;
       totalPrecipIn+=p;
-      if(p>1.5){
-        var leachFrac=Math.min(0.20,(p-1.5)*0.09);
+      if(p>t.leachThresh){
+        var leachFrac=Math.min(t.leachMax,(p-t.leachThresh)*t.leachRate);
         var lost=avail*leachFrac;
         avail-=lost; leachLoss+=lost;
         satDays=Math.min(satDays+2,6);
@@ -746,7 +784,7 @@ function _simYear(demand, totalAvail, precipMm){
       } else {
         satDays=Math.max(0,satDays-1);
       }
-      if(satDays>=3){ var dlost=avail*0.025; avail-=dlost; denitrLoss+=dlost; satDays=1; }
+      if(satDays>=t.denitrDays){ var dlost=avail*t.denitrRate; avail-=dlost; denitrLoss+=dlost; satDays=1; }
       if(avail<0)avail=0;
     }
     prevDay=dayEnd;
@@ -793,10 +831,11 @@ async function fetchWeatherBands(){
 
     // Simulate each year
     var demand=_chart.demand, totalAvail=_chart.totalAvail;
+    var tex=TEXTURES[gv('soilTexture').value]||TEXTURES.loam;
     var allRem=[], yearRows=[];
     for(var yr in yearPrecip){
       if(yearPrecip[yr].length>=100){
-        var sim=_simYear(demand,totalAvail,yearPrecip[yr]);
+        var sim=_simYear(demand,totalAvail,yearPrecip[yr],tex);
         allRem.push(sim);
         yearRows.push({year:parseInt(yr), sim:sim, meta:sim._meta});
       }
@@ -831,7 +870,7 @@ async function fetchWeatherBands(){
           stagePrecip[stageForDay]+=(cpPrecip[i]||0)/25.4;
         }
         // Simulate current-season N losses from actual precip
-        var curSim=_simYear(_chart.demand,_chart.totalAvail,cpPrecipMm);
+        var curSim=_simYear(_chart.demand,_chart.totalAvail,cpPrecipMm,tex);
         var cm=curSim._meta;
         var lossEl=gv('n-loss-breakdown');
         if(lossEl&&cm&&_chart._sources){
@@ -849,7 +888,7 @@ async function fetchWeatherBands(){
               +'</tr>';
           }
           lossEl.style.display='block';
-          lossEl.innerHTML='<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;margin-bottom:8px">N Accounting — This Season</div>'
+          lossEl.innerHTML='<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:#374151;margin-bottom:10px">N Accounting — This Season</div>'
             +'<table style="width:100%;border-collapse:collapse">'
             +'<tr><td colspan="3" style="font-size:10px;font-weight:700;color:#16a34a;padding:2px 0 4px;text-transform:uppercase;letter-spacing:0.04em">Sources</td></tr>'
             +(s.prePlant?row('Pre-plant applied','+'+s.prePlant+' lb/ac','#16a34a'):'')
@@ -859,9 +898,9 @@ async function fetchWeatherBands(){
             +(s.fert3?row('Fertigation 3','+'+s.fert3+' lb/ac','#16a34a'):'')
             +row('Mineralization (OM)','+'+s.mineralization+' lb/ac','#16a34a','OM × 20')
             +(s.prevCrop?row('Previous crop credit','+'+s.prevCrop+' lb/ac','#16a34a','soybean'):'')
-            +'<tr><td colspan="3" style="border-top:1px solid #e5e7eb;padding:6px 0 4px;font-size:10px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.04em">Losses (weather-estimated)</td></tr>'
-            +row('Leaching','−'+ll+' lb/ac','#b45309',cm.leachEvents+' event'+(cm.leachEvents!==1?'s':'')+' &gt;1.5"')
-            +row('Denitrification','−'+dl+' lb/ac','#7c3aed','saturated soil days')
+            +(totalLost>0?'<tr><td colspan="3" style="border-top:1px solid #e5e7eb;padding:6px 0 4px;font-size:10px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.04em">Losses (weather-estimated)</td></tr>':'')
+            +(ll>0?row('Leaching','−'+ll+' lb/ac','#b45309',cm.leachEvents+' event'+(cm.leachEvents!==1?'s':'')+' &gt;'+tex.leachThresh+'"'):'')
+            +(dl>0?row('Denitrification','−'+dl+' lb/ac','#7c3aed','saturated soil days'):'')
             +'<tr style="border-top:2px solid #374151"><td style="padding:8px 8px 4px 0;font-size:13px;font-weight:700">Net available</td>'
             +'<td style="padding:8px 0 4px;font-size:15px;font-weight:800;text-align:right;color:'+(net>0?'#1a56a0':'#dc2626')+'">'+net+' lb/ac</td>'
             +'<td style="padding:8px 0 4px 8px;font-size:10px;color:#9ca3af">'+cm.totalPrecipIn.toFixed(1)+'" rain so far</td></tr>'
