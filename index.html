@@ -223,6 +223,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
         <div id="vto-stress-wrap" style="display:none"><span style="font-size:11px;color:#6b7280">Bad year (10th pct)</span><br><strong id="vto-stress" style="font-size:16px">—</strong></div>
       </div>
     </div>
+    <div id="n-loss-breakdown" style="display:none;margin-top:10px;padding:10px 12px;background:#fff8f0;border-radius:8px;border:1px solid #fed7aa"></div>
   </div>
 
   <div class="section" id="hist-section" style="display:none">
@@ -715,26 +716,28 @@ function _pctile(arr, p){
 
 function _simYear(demand, totalAvail, precipMm){
   var avail=totalAvail, satDays=0, prevDay=0, result=[];
-  var leachEvents=0, totalPrecipIn=0;
+  var leachEvents=0, leachLoss=0, denitrLoss=0, totalPrecipIn=0;
   for(var s=0;s<STAGES.length;s++){
     var dayEnd=_STAGE_DAYS_SIM[s];
     for(var day=prevDay;day<dayEnd&&day<precipMm.length;day++){
       var p=(precipMm[day]||0)/25.4;
       totalPrecipIn+=p;
       if(p>1.5){
-        avail-=avail*Math.min(0.20,(p-1.5)*0.09);
+        var leachFrac=Math.min(0.20,(p-1.5)*0.09);
+        var lost=avail*leachFrac;
+        avail-=lost; leachLoss+=lost;
         satDays=Math.min(satDays+2,6);
         leachEvents++;
       } else {
         satDays=Math.max(0,satDays-1);
       }
-      if(satDays>=3){ avail-=avail*0.025; satDays=1; }
+      if(satDays>=3){ var dlost=avail*0.025; avail-=dlost; denitrLoss+=dlost; satDays=1; }
       if(avail<0)avail=0;
     }
     prevDay=dayEnd;
     result.push(avail - demand*STAGES[s].pct/100);
   }
-  result._meta={leachEvents:leachEvents, totalPrecipIn:totalPrecipIn};
+  result._meta={leachEvents:leachEvents,leachLoss:leachLoss,denitrLoss:denitrLoss,totalPrecipIn:totalPrecipIn};
   return result;
 }
 
@@ -805,12 +808,27 @@ async function fetchWeatherBands(){
       var cpData=await cpRes.json();
       if(cpData.daily&&cpData.daily.time){
         var cpTimes=cpData.daily.time, cpPrecip=cpData.daily.precipitation_sum;
+        var cpPrecipMm=cpPrecip.map(function(v){return v||0;});
         for(var i=0;i<cpTimes.length;i++){
-          var dayN=i; // day offset from planting
-          // Find which stage this day belongs to
+          var dayN=i;
           var stageForDay=0;
           for(var s=0;s<_STAGE_DAYS_SIM.length;s++){if(dayN<=_STAGE_DAYS_SIM[s]){stageForDay=s;break;} stageForDay=s;}
-          stagePrecip[stageForDay]+=(cpPrecip[i]||0)/25.4; // accumulate inches per stage
+          stagePrecip[stageForDay]+=(cpPrecip[i]||0)/25.4;
+        }
+        // Simulate current-season N losses from actual precip
+        var curSim=_simYear(_chart.demand,_chart.totalAvail,cpPrecipMm);
+        var cm=curSim._meta;
+        var lossEl=gv('n-loss-breakdown');
+        if(lossEl&&cm){
+          var ll=Math.round(cm.leachLoss), dl=Math.round(cm.denitrLoss);
+          lossEl.style.display='block';
+          lossEl.innerHTML='<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;margin-bottom:6px">Estimated N Losses This Season</div>'
+            +'<div style="display:flex;gap:16px;flex-wrap:wrap">'
+            +'<div><span style="font-size:11px;color:#6b7280">Leaching</span><br><strong style="font-size:16px;color:#b45309">'+ll+' lb/ac</strong><br><span style="font-size:10px;color:#9ca3af">'+cm.leachEvents+' event'+(cm.leachEvents!==1?'s':'')+' &gt;1.5"</span></div>'
+            +'<div><span style="font-size:11px;color:#6b7280">Denitrification</span><br><strong style="font-size:16px;color:#7c3aed">'+dl+' lb/ac</strong><br><span style="font-size:10px;color:#9ca3af">saturated soil</span></div>'
+            +'<div><span style="font-size:11px;color:#6b7280">Total Lost</span><br><strong style="font-size:16px;color:#dc2626">'+(ll+dl)+' lb/ac</strong></div>'
+            +'<div><span style="font-size:11px;color:#6b7280">Season Rain</span><br><strong style="font-size:16px;color:#374151">'+cm.totalPrecipIn.toFixed(1)+'"</strong></div>'
+            +'</div>';
         }
       }
     }catch(e2){/* silently skip current-season precip if unavailable */}
