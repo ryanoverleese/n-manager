@@ -541,14 +541,6 @@ function _render(prog, hover){
     return segs;
   }
 
-  // Gradient fill under past line (uses rpts for simplicity)
-  if(curIdx>0){
-    var fg=ctx.createLinearGradient(0,rpts[0].y,0,zy);
-    fg.addColorStop(0,lca+'0.28)'); fg.addColorStop(1,lca+'0.03)');
-    ctx.beginPath(); _spline(ctx,rpts,0,curIdx);
-    ctx.lineTo(rpts[curIdx].x,zy); ctx.lineTo(rpts[0].x,zy); ctx.closePath();
-    ctx.fillStyle=fg; ctx.fill();
-  }
 
   // Future confidence band
   if(curIdx<n-1){
@@ -607,21 +599,25 @@ function _render(prog, hover){
     });
   }
 
-  // Rainfall bars at bottom — current season actual precip grouped by stage
+  // Rainfall strips along top — thin bars growing downward from top edge
   if(d.stagePrecip){
-    var barH=22, barY=P.t+ch-barH;
+    var stripMax=14; // max strip height in px
     var maxP=Math.max.apply(null,d.stagePrecip.map(function(v){return v||0;}))||1;
     for(var i=0;i<d.stagePrecip.length;i++){
       var p=d.stagePrecip[i]||0; if(p<=0)continue;
-      var barW=Math.max(4,(cw/(n-1))*0.55);
-      var bh2=Math.max(2,barH*(p/maxP));
+      var barW=Math.max(4,(cw/(n-1))*0.7);
+      var bh2=Math.max(2,stripMax*(p/maxP));
       var bx3=xp(i)-barW/2;
-      ctx.fillStyle=i<=curIdx?'rgba(59,130,246,0.55)':'rgba(59,130,246,0.2)';
-      ctx.fillRect(bx3, P.t+ch-bh2, barW, bh2);
+      ctx.fillStyle=i<=curIdx?'rgba(59,130,246,0.5)':'rgba(59,130,246,0.18)';
+      ctx.fillRect(bx3, P.t, barW, bh2);
+      // Inch label on tallest bars
+      if(p>=maxP*0.5){
+        ctx.fillStyle='rgba(59,130,246,0.75)'; ctx.font='bold 8px system-ui'; ctx.textAlign='center';
+        ctx.fillText(p.toFixed(1)+'"', xp(i), P.t+bh2+8);
+      }
     }
-    // Precip axis label
-    ctx.fillStyle='rgba(59,130,246,0.6)'; ctx.font='8px system-ui'; ctx.textAlign='right';
-    ctx.fillText('Rain (in)',P.l-2,P.t+ch-2);
+    ctx.fillStyle='rgba(59,130,246,0.55)'; ctx.font='8px system-ui'; ctx.textAlign='right';
+    ctx.fillText('Rain',P.l-2,P.t+10);
   }
 
   ctx.restore();
