@@ -190,7 +190,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
   </div>
 
   <div class="section">
-    <h2>Season N Demand Curve</h2>
+    <h2>Season N Demand Curve <button onclick="openChartFullscreen()" style="float:right;background:none;border:1.5px solid #d1d5db;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:13px;color:#6b7280;line-height:1" title="Fullscreen landscape">⛶</button></h2>
     <canvas id="curve" height="260"></canvas>
     <div class="chart-legend">
       <span class="leg-item"><span class="leg-solid"></span> N Remaining</span>
@@ -863,6 +863,67 @@ function toggleHist(){
   var open=wrap.style.display==='none';
   wrap.style.display=open?'':'none';
   btn.textContent=open?'Hide':'Show';
+}
+
+// Fullscreen landscape chart
+function openChartFullscreen(){
+  var overlay=gv('chart-fs-overlay');
+  if(!overlay){
+    overlay=document.createElement('div');
+    overlay.id='chart-fs-overlay';
+    overlay.style.cssText='position:fixed;inset:0;z-index:9999;background:#f8fafc;display:flex;flex-direction:column;align-items:stretch;justify-content:center';
+    var closeBtn=document.createElement('button');
+    closeBtn.textContent='✕';
+    closeBtn.style.cssText='position:absolute;top:10px;right:14px;z-index:1;background:none;border:none;font-size:22px;color:#6b7280;cursor:pointer;padding:4px 8px;line-height:1';
+    closeBtn.onclick=closeChartFullscreen;
+    var fsCanvas=document.createElement('canvas');
+    fsCanvas.id='curve-fs';
+    fsCanvas.style.cssText='width:100%;height:100%;display:block';
+    overlay.appendChild(closeBtn);
+    overlay.appendChild(fsCanvas);
+    document.body.appendChild(overlay);
+  }
+  overlay.style.display='flex';
+  // Lock landscape if supported
+  if(screen.orientation&&screen.orientation.lock){
+    screen.orientation.lock('landscape').catch(function(){});
+  }
+  // Redraw on fullscreen canvas at full window dimensions
+  requestAnimationFrame(function(){
+    var fsCanvas=gv('curve-fs');
+    var W=window.innerWidth, H=window.innerHeight-40;
+    var dpr=window.devicePixelRatio||1;
+    fsCanvas.width=W*dpr; fsCanvas.height=H*dpr;
+    fsCanvas.style.width=W+'px'; fsCanvas.style.height=H+'px';
+    if(_chart){
+      var saved=_chart.canvas;
+      var savedW=_chart.W, savedH=_chart.H, savedP=_chart.P;
+      var savedCw=_chart.cw, savedCh=_chart.ch;
+      var savedRpts=_chart.rpts, savedXp=_chart.xp, savedYp=_chart.yp;
+      var savedDpr=_chart.dpr;
+      // Recalculate layout for fullscreen dimensions
+      var P={t:28,r:90,b:44,l:54};
+      var cw=W-P.l-P.r, ch=H-P.t-P.b;
+      var span=_chart.maxY-_chart.minY;
+      function xp(i){return P.l+(i/(_chart.n-1))*cw;}
+      function yp(v){return P.t+ch-((v-_chart.minY)/span)*ch;}
+      _chart.canvas=fsCanvas; _chart.W=W; _chart.H=H; _chart.P=P;
+      _chart.cw=cw; _chart.ch=ch; _chart.xp=xp; _chart.yp=yp;
+      _chart.rpts=_chart.stagedRemVals.map(function(v,i){return{x:xp(i),y:yp(v)};});
+      _chart.dpr=dpr;
+      _render(1,-1);
+      // Restore original chart state
+      _chart.canvas=saved; _chart.W=savedW; _chart.H=savedH; _chart.P=savedP;
+      _chart.cw=savedCw; _chart.ch=savedCh; _chart.xp=savedXp; _chart.yp=savedYp;
+      _chart.rpts=savedRpts; _chart.dpr=savedDpr;
+    }
+  });
+}
+
+function closeChartFullscreen(){
+  var overlay=gv('chart-fs-overlay');
+  if(overlay)overlay.style.display='none';
+  if(screen.orientation&&screen.orientation.unlock)screen.orientation.unlock();
 }
 </script>
 </body>
