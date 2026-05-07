@@ -871,53 +871,53 @@ function openChartFullscreen(){
   if(!overlay){
     overlay=document.createElement('div');
     overlay.id='chart-fs-overlay';
-    overlay.style.cssText='position:fixed;inset:0;z-index:9999;background:#f8fafc;display:flex;flex-direction:column;align-items:stretch;justify-content:center';
+    overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:#f8fafc';
     var closeBtn=document.createElement('button');
     closeBtn.textContent='✕';
     closeBtn.style.cssText='position:absolute;top:10px;right:14px;z-index:1;background:none;border:none;font-size:22px;color:#6b7280;cursor:pointer;padding:4px 8px;line-height:1';
     closeBtn.onclick=closeChartFullscreen;
     var fsCanvas=document.createElement('canvas');
     fsCanvas.id='curve-fs';
-    fsCanvas.style.cssText='width:100%;height:100%;display:block';
+    fsCanvas.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%';
     overlay.appendChild(closeBtn);
     overlay.appendChild(fsCanvas);
     document.body.appendChild(overlay);
   }
-  overlay.style.display='flex';
-  // Lock landscape if supported
+  overlay.style.display='block';
   if(screen.orientation&&screen.orientation.lock){
     screen.orientation.lock('landscape').catch(function(){});
   }
-  // Redraw on fullscreen canvas at full window dimensions
+  // Double rAF: first lets the overlay lay out, second measures actual rendered size
   requestAnimationFrame(function(){
-    var fsCanvas=gv('curve-fs');
-    var W=window.innerWidth, H=window.innerHeight-40;
-    var dpr=window.devicePixelRatio||1;
-    fsCanvas.width=W*dpr; fsCanvas.height=H*dpr;
-    fsCanvas.style.width=W+'px'; fsCanvas.style.height=H+'px';
-    if(_chart){
-      var saved=_chart.canvas;
-      var savedW=_chart.W, savedH=_chart.H, savedP=_chart.P;
-      var savedCw=_chart.cw, savedCh=_chart.ch;
-      var savedRpts=_chart.rpts, savedXp=_chart.xp, savedYp=_chart.yp;
-      var savedDpr=_chart.dpr;
-      // Recalculate layout for fullscreen dimensions
-      var P={t:28,r:90,b:44,l:54};
-      var cw=W-P.l-P.r, ch=H-P.t-P.b;
-      var span=_chart.maxY-_chart.minY;
-      function xp(i){return P.l+(i/(_chart.n-1))*cw;}
-      function yp(v){return P.t+ch-((v-_chart.minY)/span)*ch;}
-      _chart.canvas=fsCanvas; _chart.W=W; _chart.H=H; _chart.P=P;
-      _chart.cw=cw; _chart.ch=ch; _chart.xp=xp; _chart.yp=yp;
-      _chart.rpts=_chart.stagedRemVals.map(function(v,i){return{x:xp(i),y:yp(v)};});
-      _chart.dpr=dpr;
-      _render(1,-1);
-      // Restore original chart state
-      _chart.canvas=saved; _chart.W=savedW; _chart.H=savedH; _chart.P=savedP;
-      _chart.cw=savedCw; _chart.ch=savedCh; _chart.xp=savedXp; _chart.yp=savedYp;
-      _chart.rpts=savedRpts; _chart.dpr=savedDpr;
-    }
+    requestAnimationFrame(function(){
+      _renderFullscreen();
+    });
   });
+}
+
+function _renderFullscreen(){
+  var fsCanvas=gv('curve-fs');
+  if(!fsCanvas||!_chart)return;
+  var rect=fsCanvas.getBoundingClientRect();
+  var W=rect.width, H=rect.height;
+  var dpr=window.devicePixelRatio||1;
+  fsCanvas.width=Math.round(W*dpr);
+  fsCanvas.height=Math.round(H*dpr);
+  var saved={canvas:_chart.canvas,W:_chart.W,H:_chart.H,P:_chart.P,
+    cw:_chart.cw,ch:_chart.ch,rpts:_chart.rpts,xp:_chart.xp,yp:_chart.yp,dpr:_chart.dpr};
+  var P={t:28,r:96,b:44,l:54};
+  var cw=W-P.l-P.r, ch=H-P.t-P.b;
+  var span=_chart.maxY-_chart.minY;
+  var n=_chart.n;
+  function xp(i){return P.l+(i/(n-1))*cw;}
+  function yp(v){return P.t+ch-((v-_chart.minY)/span)*ch;}
+  _chart.canvas=fsCanvas; _chart.W=W; _chart.H=H; _chart.P=P;
+  _chart.cw=cw; _chart.ch=ch; _chart.xp=xp; _chart.yp=yp; _chart.dpr=dpr;
+  _chart.rpts=_chart.stagedRemVals.map(function(v,i){return{x:xp(i),y:yp(v)};});
+  _render(1,-1);
+  _chart.canvas=saved.canvas; _chart.W=saved.W; _chart.H=saved.H; _chart.P=saved.P;
+  _chart.cw=saved.cw; _chart.ch=saved.ch; _chart.xp=saved.xp; _chart.yp=saved.yp;
+  _chart.rpts=saved.rpts; _chart.dpr=saved.dpr;
 }
 
 function closeChartFullscreen(){
