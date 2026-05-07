@@ -460,6 +460,31 @@ function _render(prog, hover, prad){
   ctx.save();
   ctx.beginPath(); ctx.rect(P.l-1,0,cw*prog+2,H); ctx.clip();
 
+  // Segment helpers — break spline at each application for sharp full-amount jumps
+  var appBreaks=d.appMarkers?d.appMarkers.map(function(m){return m.idx;}):[];
+  function _segPts(from,to,endPreApp){
+    var pts=[];
+    for(var i=from;i<=to;i++){
+      var v=d.stagedRemVals[i]||0;
+      if(i===to&&endPreApp&&d.appPool[to])v-=d.appPool[to];
+      pts.push({x:xp(i),y:yp(v)});
+    }
+    return pts;
+  }
+  function _getSegs(fromSt,toSt){
+    var segs=[],cursor=fromSt;
+    for(var bi=0;bi<appBreaks.length;bi++){
+      var bk=appBreaks[bi];
+      if(bk<=fromSt||bk>toSt)continue;
+      var preV=(d.stagedRemVals[bk]||0)-(d.appPool[bk]||0);
+      segs.push({pts:_segPts(cursor,bk,true),jx:xp(bk),jFrom:yp(preV),jTo:yp(d.stagedRemVals[bk]||0)});
+      cursor=bk;
+    }
+    segs.push({pts:_segPts(cursor,toSt,false),jx:null});
+    return segs;
+  }
+
+  // Gradient fill under past line (uses rpts for simplicity)
   if(curIdx>0){
     var fg=ctx.createLinearGradient(0,rpts[0].y,0,zy);
     fg.addColorStop(0,lca+'0.28)'); fg.addColorStop(1,lca+'0.03)');
@@ -468,6 +493,7 @@ function _render(prog, hover, prad){
     ctx.fillStyle=fg; ctx.fill();
   }
 
+  // Future confidence band
   if(curIdx<n-1){
     ctx.beginPath(); ctx.moveTo(rpts[curIdx].x,rpts[curIdx].y);
     for(var i=curIdx+1;i<n;i++){var f=(i-curIdx)/(n-1-curIdx),sp=ch*0.08*f; ctx.lineTo(rpts[i].x,rpts[i].y-sp);}
@@ -475,22 +501,41 @@ function _render(prog, hover, prad){
     ctx.closePath(); ctx.fillStyle=lca+'0.11)'; ctx.fill();
   }
 
+  // Future dashed line — segmented with sharp jumps at applications
   if(curIdx<n-1){
-    ctx.beginPath(); _spline(ctx,rpts,curIdx,n-1);
-    ctx.strokeStyle=lca+'0.48)'; ctx.lineWidth=2.5; ctx.setLineDash([8,5]);
-    ctx.shadowColor=lca+'0.3)'; ctx.shadowBlur=6;
-    ctx.stroke(); ctx.setLineDash([]); ctx.shadowBlur=0;
+    _getSegs(curIdx,n-1).forEach(function(seg){
+      if(seg.pts.length<2)return;
+      ctx.beginPath(); _spline(ctx,seg.pts,0,seg.pts.length-1);
+      ctx.strokeStyle=lca+'0.48)'; ctx.lineWidth=2.5; ctx.setLineDash([8,5]);
+      ctx.shadowColor=lca+'0.3)'; ctx.shadowBlur=6;
+      ctx.stroke(); ctx.setLineDash([]); ctx.shadowBlur=0;
+      if(seg.jx!==null){
+        ctx.beginPath(); ctx.moveTo(seg.jx,seg.jFrom); ctx.lineTo(seg.jx,seg.jTo);
+        ctx.strokeStyle=lca+'0.48)'; ctx.lineWidth=2.5; ctx.setLineDash([8,5]);
+        ctx.stroke(); ctx.setLineDash([]);
+      }
+    });
   }
 
+  // Past solid line — segmented with sharp jumps at applications
   if(curIdx>0){
-    ctx.beginPath(); _spline(ctx,rpts,0,curIdx);
-    ctx.strokeStyle=lc; ctx.lineWidth=3;
-    ctx.shadowColor=lca+'0.6)'; ctx.shadowBlur=14;
-    ctx.stroke(); ctx.shadowBlur=0;
+    _getSegs(0,curIdx).forEach(function(seg){
+      if(seg.pts.length<2)return;
+      ctx.beginPath(); _spline(ctx,seg.pts,0,seg.pts.length-1);
+      ctx.strokeStyle=lc; ctx.lineWidth=3;
+      ctx.shadowColor=lca+'0.6)'; ctx.shadowBlur=14;
+      ctx.stroke(); ctx.shadowBlur=0;
+      if(seg.jx!==null){
+        ctx.beginPath(); ctx.moveTo(seg.jx,seg.jFrom); ctx.lineTo(seg.jx,seg.jTo);
+        ctx.strokeStyle=lc; ctx.lineWidth=3;
+        ctx.shadowColor=lca+'0.6)'; ctx.shadowBlur=14;
+        ctx.stroke(); ctx.shadowBlur=0;
+      }
+    });
   }
 
-  // Application blips — bold arrows with pill badges
-  if(d.appMarkers && d.appPool){
+  // Application blips — arrowhead at jump top + pill badge
+  if(d.appMarkers&&d.appPool){
     var clipX=P.l+cw*prog;
     d.appMarkers.forEach(function(m){
       var x=xp(m.idx);
@@ -500,20 +545,14 @@ function _render(prog, hover, prad){
       var isPast=m.idx<=curIdx;
       var bc=isPast?'#2d6a2d':'rgba(45,106,45,0.4)';
       var bcFill=isPast?'rgba(45,106,45,0.15)':'rgba(45,106,45,0.06)';
-      // Blip line
-      ctx.beginPath(); ctx.moveTo(x,preY); ctx.lineTo(x,postY);
-      ctx.strokeStyle=bc; ctx.lineWidth=3;
-      if(!isPast)ctx.setLineDash([4,3]);
-      ctx.shadowColor='rgba(45,106,45,0.5)'; ctx.shadowBlur=isPast?8:0;
-      ctx.stroke(); ctx.setLineDash([]); ctx.shadowBlur=0;
-      // Filled triangle arrowhead
+      // Filled triangle arrowhead at top of jump
       ctx.beginPath(); ctx.moveTo(x,postY); ctx.lineTo(x-6,postY+10); ctx.lineTo(x+6,postY+10);
       ctx.closePath(); ctx.fillStyle=bc; ctx.fill();
-      // Pill badge: label + amount
+      // Pill badge
       var txt='+'+m.raw+' lb'; var sub=m.label;
       var bw=52, bh=28, bx2=x-bw/2, by2=preY+6;
       ctx.beginPath();
-      ctx.roundRect ? ctx.roundRect(bx2,by2,bw,bh,6) : (function(){ctx.moveTo(bx2+6,by2);ctx.arcTo(bx2+bw,by2,bx2+bw,by2+bh,6);ctx.arcTo(bx2+bw,by2+bh,bx2,by2+bh,6);ctx.arcTo(bx2,by2+bh,bx2,by2,6);ctx.arcTo(bx2,by2,bx2+bw,by2,6);ctx.closePath();})();
+      ctx.roundRect?ctx.roundRect(bx2,by2,bw,bh,6):(function(){ctx.moveTo(bx2+6,by2);ctx.arcTo(bx2+bw,by2,bx2+bw,by2+bh,6);ctx.arcTo(bx2+bw,by2+bh,bx2,by2+bh,6);ctx.arcTo(bx2,by2+bh,bx2,by2,6);ctx.arcTo(bx2,by2,bx2+bw,by2,6);ctx.closePath();})();
       ctx.fillStyle=bcFill; ctx.fill();
       ctx.strokeStyle=bc; ctx.lineWidth=1.5; ctx.stroke();
       ctx.fillStyle=isPast?'#2d6a2d':'rgba(45,106,45,0.5)';
