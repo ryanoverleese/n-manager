@@ -416,7 +416,7 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
   }
 
   var maxY=Math.ceil(Math.max(totalAvail,demand,stagedRemVals[0])*1.06/50)*50;
-  var minY=Math.min(0,Math.floor(Math.min.apply(null,stagedRemVals)/50)*50-10);
+  var minY=-10; // floor at -10; below zero is already deficient, no need for scale depth
   var span=maxY-minY;
 
   function xp(i){return P.l+(i/(n-1))*cw;}
@@ -916,8 +916,8 @@ function openChartFullscreen(){
 function _renderFullscreen(){
   var fsCanvas=gv('curve-fs');
   if(!fsCanvas||!_chart)return;
-  var rect=fsCanvas.getBoundingClientRect();
-  var W=rect.width, H=rect.height;
+  var W=document.documentElement.clientWidth||window.innerWidth;
+  var H=document.documentElement.clientHeight||window.innerHeight;
   var dpr=window.devicePixelRatio||1;
   fsCanvas.width=Math.round(W*dpr);
   fsCanvas.height=Math.round(H*dpr);
