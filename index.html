@@ -223,7 +223,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
         <div id="vto-stress-wrap" style="display:none"><span style="font-size:11px;color:#6b7280">Bad year (10th pct)</span><br><strong id="vto-stress" style="font-size:16px">—</strong></div>
       </div>
     </div>
-    <div id="n-loss-breakdown" style="display:none;margin-top:10px;padding:10px 12px;background:#fff8f0;border-radius:8px;border:1px solid #fed7aa"></div>
+    <div id="n-loss-breakdown" style="display:none;margin-top:10px;padding:10px 12px;background:#fafafa;border-radius:8px;border:1px solid #e5e7eb"></div>
   </div>
 
   <div class="section" id="hist-section" style="display:none">
@@ -445,7 +445,13 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
   }
 
   if(_raf)cancelAnimationFrame(_raf);
-  _chart={canvas:canvas,W:W,H:H,P:P,cw:cw,ch:ch,n:n,demand:demand,totalAvail:totalAvail,surplus:surplus,remVals:remVals,stagedRemVals:stagedRemVals,appMarkers:appMarkers,appPool:appPool,curIdx:curIdx,maxY:maxY,minY:minY,span:span,xp:xp,yp:yp,rpts:rpts,vtTarget:vtTarget,lc:lc,lca:lca,ok:ok,dpr:dpr};
+  var lm=num('lossMultiplier')||1;
+  var leachInput=parseInt(document.querySelector('input[name=leach]:checked').value)||0;
+  var satInput=gv('saturated').checked||false;
+  var lossPctInput=Math.min(50,leachInput*10+(satInput?15:0));
+  var lossesInput=Math.round((ppR+sdR+f1R+f2R+f3R)*lossPctInput/100);
+  _chart={canvas:canvas,W:W,H:H,P:P,cw:cw,ch:ch,n:n,demand:demand,totalAvail:totalAvail,surplus:surplus,remVals:remVals,stagedRemVals:stagedRemVals,appMarkers:appMarkers,appPool:appPool,curIdx:curIdx,maxY:maxY,minY:minY,span:span,xp:xp,yp:yp,rpts:rpts,vtTarget:vtTarget,lc:lc,lca:lca,ok:ok,dpr:dpr,
+    _sources:{prePlant:Math.round(ppR),sidedress:Math.round(sdR),fert1:Math.round(f1R),fert2:Math.round(f2R),fert3:Math.round(f3R),mineralization:Math.round(omCr),prevCrop:Math.round(prevCr),inputLosses:lossesInput}};
 
   var startTs=null, dur=1100;
   _raf=requestAnimationFrame(function step(ts){
@@ -819,16 +825,38 @@ async function fetchWeatherBands(){
         var curSim=_simYear(_chart.demand,_chart.totalAvail,cpPrecipMm);
         var cm=curSim._meta;
         var lossEl=gv('n-loss-breakdown');
-        if(lossEl&&cm){
+        if(lossEl&&cm&&_chart._sources){
+          var s=_chart._sources;
           var ll=Math.round(cm.leachLoss), dl=Math.round(cm.denitrLoss);
+          var totalLost=ll+dl;
+          var appliedTotal=s.prePlant+s.sidedress+s.fert1+s.fert2+s.fert3;
+          var totalSources=appliedTotal+s.mineralization+s.prevCrop;
+          var net=totalSources-totalLost;
+          function row(label,val,color,sub){
+            return '<tr>'
+              +'<td style="padding:4px 8px 4px 0;font-size:12px;color:#6b7280">'+label+'</td>'
+              +'<td style="padding:4px 0;font-size:13px;font-weight:700;text-align:right;color:'+(color||'#374151')+'">'+val+'</td>'
+              +(sub?'<td style="padding:4px 0 4px 8px;font-size:10px;color:#9ca3af">'+sub+'</td>':'<td></td>')
+              +'</tr>';
+          }
           lossEl.style.display='block';
-          lossEl.innerHTML='<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;margin-bottom:6px">Estimated N Losses This Season</div>'
-            +'<div style="display:flex;gap:16px;flex-wrap:wrap">'
-            +'<div><span style="font-size:11px;color:#6b7280">Leaching</span><br><strong style="font-size:16px;color:#b45309">'+ll+' lb/ac</strong><br><span style="font-size:10px;color:#9ca3af">'+cm.leachEvents+' event'+(cm.leachEvents!==1?'s':'')+' &gt;1.5"</span></div>'
-            +'<div><span style="font-size:11px;color:#6b7280">Denitrification</span><br><strong style="font-size:16px;color:#7c3aed">'+dl+' lb/ac</strong><br><span style="font-size:10px;color:#9ca3af">saturated soil</span></div>'
-            +'<div><span style="font-size:11px;color:#6b7280">Total Lost</span><br><strong style="font-size:16px;color:#dc2626">'+(ll+dl)+' lb/ac</strong></div>'
-            +'<div><span style="font-size:11px;color:#6b7280">Season Rain</span><br><strong style="font-size:16px;color:#374151">'+cm.totalPrecipIn.toFixed(1)+'"</strong></div>'
-            +'</div>';
+          lossEl.innerHTML='<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;margin-bottom:8px">N Accounting — This Season</div>'
+            +'<table style="width:100%;border-collapse:collapse">'
+            +'<tr><td colspan="3" style="font-size:10px;font-weight:700;color:#16a34a;padding:2px 0 4px;text-transform:uppercase;letter-spacing:0.04em">Sources</td></tr>'
+            +(s.prePlant?row('Pre-plant applied','+'+s.prePlant+' lb/ac','#16a34a'):'')
+            +(s.sidedress?row('Sidedress','+'+s.sidedress+' lb/ac','#16a34a'):'')
+            +(s.fert1?row('Fertigation 1','+'+s.fert1+' lb/ac','#16a34a'):'')
+            +(s.fert2?row('Fertigation 2','+'+s.fert2+' lb/ac','#16a34a'):'')
+            +(s.fert3?row('Fertigation 3','+'+s.fert3+' lb/ac','#16a34a'):'')
+            +row('Mineralization (OM)','+'+s.mineralization+' lb/ac','#16a34a','OM × 20')
+            +(s.prevCrop?row('Previous crop credit','+'+s.prevCrop+' lb/ac','#16a34a','soybean'):'')
+            +'<tr><td colspan="3" style="border-top:1px solid #e5e7eb;padding:6px 0 4px;font-size:10px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.04em">Losses (weather-estimated)</td></tr>'
+            +row('Leaching','−'+ll+' lb/ac','#b45309',cm.leachEvents+' event'+(cm.leachEvents!==1?'s':'')+' &gt;1.5"')
+            +row('Denitrification','−'+dl+' lb/ac','#7c3aed','saturated soil days')
+            +'<tr style="border-top:2px solid #374151"><td style="padding:8px 8px 4px 0;font-size:13px;font-weight:700">Net available</td>'
+            +'<td style="padding:8px 0 4px;font-size:15px;font-weight:800;text-align:right;color:'+(net>0?'#1a56a0':'#dc2626')+'">'+net+' lb/ac</td>'
+            +'<td style="padding:8px 0 4px 8px;font-size:10px;color:#9ca3af">'+cm.totalPrecipIn.toFixed(1)+'" rain so far</td></tr>'
+            +'</table>';
         }
       }
     }catch(e2){/* silently skip current-season precip if unavailable */}
