@@ -195,7 +195,6 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
     <div class="chart-legend">
       <span class="leg-item"><span class="leg-solid"></span> N Remaining</span>
       <span class="leg-item"><span class="leg-dash"></span> Projected</span>
-      <span class="leg-item"><span class="leg-ring"></span> You are here</span>
       <span class="leg-item" id="leg-bands" style="display:none"><span style="display:inline-block;width:20px;height:8px;background:rgba(100,120,150,0.18);border-radius:2px"></span> 50-yr range</span>
     </div>
     <div id="weather-status" style="display:none;font-size:11px;color:#9ca3af;margin-top:6px"></div>
@@ -326,7 +325,7 @@ function calculate() {
   gv('results').scrollIntoView({behavior:'smooth'});
 }
 
-var _chart=null, _raf=null, _pulseRaf=null, _pulsePhase=0;
+var _chart=null, _raf=null;
 
 function _spline(ctx, pts, from, to){
   ctx.moveTo(pts[from].x, pts[from].y);
@@ -390,7 +389,6 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
   var lca=ok?'rgba(26,86,160,':'rgba(192,57,43,';
 
   if(_raf)cancelAnimationFrame(_raf);
-  if(_pulseRaf)cancelAnimationFrame(_pulseRaf);
   _chart={canvas:canvas,W:W,H:H,P:P,cw:cw,ch:ch,n:n,demand:demand,totalAvail:totalAvail,surplus:surplus,remVals:remVals,stagedRemVals:stagedRemVals,appMarkers:appMarkers,appPool:appPool,curIdx:curIdx,maxY:maxY,minY:minY,span:span,xp:xp,yp:yp,rpts:rpts,vtTarget:vtTarget,lc:lc,lca:lca,ok:ok,dpr:dpr};
 
   var startTs=null, dur=1100;
@@ -398,13 +396,13 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
     if(!startTs)startTs=ts;
     var t=Math.min((ts-startTs)/dur,1);
     var ease=1-Math.pow(1-t,3);
-    _render(ease,-1,0);
+    _render(ease,-1);
     if(t<1)_raf=requestAnimationFrame(step);
-    else{_raf=null;_pulse();_bindEvents();}
+    else{_raf=null;_bindEvents();}
   });
 }
 
-function _render(prog, hover, prad){
+function _render(prog, hover){
   var d=_chart; if(!d)return;
   var ctx=d.canvas.getContext('2d');
   var P=d.P, cw=d.cw, ch=d.ch, W=d.W, H=d.H, n=d.n;
@@ -599,15 +597,6 @@ function _render(prog, hover, prad){
   ctx.fillStyle='#f59e0b'; ctx.font='bold 9px system-ui'; ctx.textAlign='center';
   ctx.fillText('Now',rpts[curIdx].x,P.t+ch+14);
 
-  var hx=rpts[curIdx].x, hy=rpts[curIdx].y;
-  if(prad>0){
-    ctx.beginPath(); ctx.arc(hx,hy,prad,0,Math.PI*2);
-    ctx.strokeStyle=lca+Math.max(0,0.65-(prad-9)/18)+')'; ctx.lineWidth=2; ctx.stroke();
-  }
-  ctx.beginPath(); ctx.arc(hx,hy,9,0,Math.PI*2);
-  ctx.strokeStyle=lc; ctx.lineWidth=2.5;
-  ctx.shadowColor=lca+'0.65)'; ctx.shadowBlur=10; ctx.stroke(); ctx.shadowBlur=0;
-  ctx.beginPath(); ctx.arc(hx,hy,4,0,Math.PI*2); ctx.fillStyle=lc; ctx.fill();
 
   ctx.fillStyle=lc; ctx.font='bold 11px system-ui'; ctx.textAlign='left';
   ctx.fillText(Math.round((d.stagedRemVals||d.remVals)[curIdx])+' lb',P.l+cw+3,hy+4);
@@ -628,12 +617,6 @@ function _render(prog, hover, prad){
   ctx.restore();
 }
 
-function _pulse(){
-  _pulsePhase+=0.055;
-  var r=9+4*Math.abs(Math.sin(_pulsePhase));
-  _render(1,-1,r);
-  _pulseRaf=requestAnimationFrame(_pulse);
-}
 
 function _bindEvents(){
   var d=_chart; if(!d)return;
@@ -646,8 +629,7 @@ function _bindEvents(){
   }
 
   function showTip(clientX, clientY, idx){
-    if(_pulseRaf){cancelAnimationFrame(_pulseRaf);_pulseRaf=null;}
-    _render(1,idx,0);
+    _render(1,idx);
     var v=(d.stagedRemVals||d.remVals)[idx], proj=idx>d.curIdx;
     var lbl=v>30?'Sufficient':v>10?'Marginal':v>0?'Borderline':'Deficient';
     var col=v>30?'#4ade80':v>10?'#fbbf24':v>0?'#f97316':'#f87171';
@@ -669,7 +651,7 @@ function _bindEvents(){
 
   function hideTip(){
     tip.style.display='none';
-    _render(1,-1,0);
+    _render(1,-1);
     _pulse();
   }
 
@@ -800,8 +782,7 @@ async function fetchWeatherBands(){
     if(ws){ws.textContent='Historical range based on '+allRem.length+' years of weather data \u00b7 '+county+', '+state;}
     var lb=gv('leg-bands'); if(lb)lb.style.display='';
     _renderHistTable();
-    _render(1,-1,0);
-    if(!_pulseRaf)_pulse();
+    _render(1,-1);
   } catch(e){
     console.warn('Weather bands:',e.message);
     if(ws){ws.textContent='Weather history unavailable for this location.';ws.style.color='#f87171';}
