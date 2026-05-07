@@ -541,9 +541,10 @@ function _render(prog, hover, prad){
   // Application blips — arrowhead at jump top + pill badge
   if(d.appMarkers&&d.appPool){
     var clipX=P.l+cw*prog;
+    var mi=0;
     d.appMarkers.forEach(function(m){
       var x=xp(m.idx);
-      if(x>clipX+2)return;
+      if(x>clipX+2){mi++;return;}
       var preVal=(d.stagedRemVals[m.idx]||0)-(d.appPool[m.idx]||0);
       var preY=yp(preVal), postY=yp(d.stagedRemVals[m.idx]||0);
       var isPast=m.idx<=curIdx;
@@ -552,17 +553,24 @@ function _render(prog, hover, prad){
       // Filled triangle arrowhead at top of jump
       ctx.beginPath(); ctx.moveTo(x,postY); ctx.lineTo(x-6,postY+10); ctx.lineTo(x+6,postY+10);
       ctx.closePath(); ctx.fillStyle=bc; ctx.fill();
-      // Pill badge
+      // Pill badge — staggered vertically by marker index to avoid overlap
       var txt='+'+m.raw+' lb'; var sub=m.label;
-      var bw=52, bh=28, bx2=x-bw/2, by2=preY+6;
+      var bw=52, bh=28, bx2=x-bw/2;
+      var badgeTop=Math.min(postY-bh-8-mi*34, P.t+ch-bh-8);
+      badgeTop=Math.max(badgeTop, P.t+4);
+      // Leader line from badge bottom to jump point
+      ctx.beginPath(); ctx.moveTo(x,badgeTop+bh); ctx.lineTo(x,postY);
+      ctx.strokeStyle=bc; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+      ctx.stroke(); ctx.setLineDash([]);
       ctx.beginPath();
-      ctx.roundRect?ctx.roundRect(bx2,by2,bw,bh,6):(function(){ctx.moveTo(bx2+6,by2);ctx.arcTo(bx2+bw,by2,bx2+bw,by2+bh,6);ctx.arcTo(bx2+bw,by2+bh,bx2,by2+bh,6);ctx.arcTo(bx2,by2+bh,bx2,by2,6);ctx.arcTo(bx2,by2,bx2+bw,by2,6);ctx.closePath();})();
+      ctx.roundRect?ctx.roundRect(bx2,badgeTop,bw,bh,6):(function(){ctx.moveTo(bx2+6,badgeTop);ctx.arcTo(bx2+bw,badgeTop,bx2+bw,badgeTop+bh,6);ctx.arcTo(bx2+bw,badgeTop+bh,bx2,badgeTop+bh,6);ctx.arcTo(bx2,badgeTop+bh,bx2,badgeTop,6);ctx.arcTo(bx2,badgeTop,bx2+bw,badgeTop,6);ctx.closePath();})();
       ctx.fillStyle=bcFill; ctx.fill();
       ctx.strokeStyle=bc; ctx.lineWidth=1.5; ctx.stroke();
       ctx.fillStyle=isPast?'#2d6a2d':'rgba(45,106,45,0.5)';
       ctx.font='bold 10px system-ui'; ctx.textAlign='center';
-      ctx.fillText(txt,x,by2+12);
-      ctx.font='8px system-ui'; ctx.fillText(sub,x,by2+24);
+      ctx.fillText(txt,x,badgeTop+12);
+      ctx.font='8px system-ui'; ctx.fillText(sub,x,badgeTop+24);
+      mi++;
     });
   }
 
