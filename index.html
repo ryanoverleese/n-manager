@@ -875,11 +875,13 @@ function _renderHistTable(){
 }
 
 function setNFactor(v){
+  var sy=window.scrollY;
   gv('nFactor').value=v;
   gv('nFactor-pills').querySelectorAll('.nf-pill').forEach(function(b){
     b.classList.toggle('nf-active', parseFloat(b.textContent)===v);
   });
   calculate();
+  window.scrollTo(0,sy);
 }
 
 function toggleHist(){
