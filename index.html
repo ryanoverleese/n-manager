@@ -399,7 +399,7 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
 
   // Staged N-remaining: line starts low and blips UP as each application hits the pool
   var ppR=num('pp-rate'),sdR=num('sd-rate'),f1R=num('f1-rate'),f2R=num('f2-rate'),f3R=num('f3-rate');
-  var omCr=num('om')*20, prevCr=gv('prevCrop').value==='soy'?50:0;
+  var omCr=num('om')*20, prevCr=gv('prevCrop').value==='soy'?25:0;
   var leachV=parseInt(document.querySelector('input[name=leach]:checked').value);
   var lossP=Math.min(50,leachV*10+(gv('saturated').checked?15:0));
   var lm=1-lossP/100;
@@ -458,11 +458,7 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
   }
 
   if(_raf)cancelAnimationFrame(_raf);
-  var lm=num('lossMultiplier')||1;
-  var leachInput=parseInt(document.querySelector('input[name=leach]:checked').value)||0;
-  var satInput=gv('saturated').checked||false;
-  var lossPctInput=Math.min(50,leachInput*10+(satInput?15:0));
-  var lossesInput=Math.round((ppR+sdR+f1R+f2R+f3R)*lossPctInput/100);
+  var lossesInput=Math.round((ppR+sdR+f1R+f2R+f3R)*lossP/100);
   _chart={canvas:canvas,W:W,H:H,P:P,cw:cw,ch:ch,n:n,demand:demand,totalAvail:totalAvail,surplus:surplus,remVals:remVals,stagedRemVals:stagedRemVals,appMarkers:appMarkers,appPool:appPool,curIdx:curIdx,maxY:maxY,minY:minY,span:span,xp:xp,yp:yp,rpts:rpts,vtTarget:vtTarget,lc:lc,lca:lca,ok:ok,dpr:dpr,
     _sources:{prePlant:Math.round(ppR),sidedress:Math.round(sdR),fert1:Math.round(f1R),fert2:Math.round(f2R),fert3:Math.round(f3R),mineralization:Math.round(omCr),prevCrop:Math.round(prevCr),inputLosses:lossesInput}};
 
