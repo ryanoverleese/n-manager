@@ -212,6 +212,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
       <span class="leg-item"><span class="leg-dash"></span> Planned apps</span>
       <span class="leg-item" id="leg-bands" style="display:none"><span style="display:inline-block;width:20px;height:8px;background:rgba(100,120,150,0.18);border-radius:2px"></span> 50-yr range</span>
     </div>
+    <div id="app-legend" style="display:none;margin-top:8px;display:flex;gap:12px;flex-wrap:wrap"></div>
     <div id="weather-status" style="display:none;font-size:11px;color:#9ca3af;margin-top:6px"></div>
     <div id="vt-outlook" style="display:none;margin-top:10px;padding:10px 12px;background:#f0f4ff;border-radius:8px;border:1px solid #dbe4f7">
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;margin-bottom:6px">VT/R1 Outlook — The Only Benchmark That Matters</div>
@@ -403,6 +404,17 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
   if(f2R>0)appMarkers.push({idx:4,raw:f2R,label:'Fert 2'});
   if(f3R>0)appMarkers.push({idx:5,raw:f3R,label:'Fert 3'});
 
+  // Build application legend
+  var legEl=gv('app-legend');
+  if(legEl){
+    legEl.innerHTML=appMarkers.map(function(m,i){
+      return '<span style="font-size:12px;color:#374151;display:flex;align-items:center;gap:4px">'
+        +'<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#2d6a2d;color:#fff;font-size:10px;font-weight:700;flex-shrink:0">'+(i+1)+'</span>'
+        +m.label+' <strong>+'+m.raw+' lb</strong></span>';
+    }).join('');
+    legEl.style.display=appMarkers.length?'flex':'none';
+  }
+
   var maxY=Math.ceil(Math.max(totalAvail,demand,stagedRemVals[0])*1.06/50)*50;
   var minY=Math.min(0,Math.floor(Math.min.apply(null,stagedRemVals)/50)*50-10);
   var span=maxY-minY;
@@ -579,39 +591,19 @@ function _render(prog, hover){
     });
   }
 
-  // Application blips — arrowhead at jump top + pill badge
+  // Application markers — numbered circles at bottom of chart
   if(d.appMarkers&&d.appPool){
     var clipX=P.l+cw*prog;
-    var mi=0;
-    d.appMarkers.forEach(function(m){
+    d.appMarkers.forEach(function(m,mi){
       var x=xp(m.idx);
-      if(x>clipX+2){mi++;return;}
-      var preVal=(d.stagedRemVals[m.idx]||0)-(d.appPool[m.idx]||0);
-      var preY=yp(preVal), postY=yp(d.stagedRemVals[m.idx]||0);
+      if(x>clipX+2)return;
       var isPast=m.idx<=curIdx;
-      var bc=isPast?'#2d6a2d':'rgba(45,106,45,0.4)';
-      var bcFill=isPast?'rgba(45,106,45,0.15)':'rgba(45,106,45,0.06)';
-      // Filled triangle arrowhead at top of jump
-      ctx.beginPath(); ctx.moveTo(x,postY); ctx.lineTo(x-6,postY+10); ctx.lineTo(x+6,postY+10);
-      ctx.closePath(); ctx.fillStyle=bc; ctx.fill();
-      // Pill badge — staggered vertically by marker index to avoid overlap
-      var txt='+'+m.raw+' lb'; var sub=m.label;
-      var bw=52, bh=28, bx2=x-bw/2;
-      var badgeTop=Math.min(postY-bh-8-mi*34, P.t+ch-bh-8);
-      badgeTop=Math.max(badgeTop, P.t+4);
-      // Leader line from badge bottom to jump point
-      ctx.beginPath(); ctx.moveTo(x,badgeTop+bh); ctx.lineTo(x,postY);
-      ctx.strokeStyle=bc; ctx.lineWidth=1; ctx.setLineDash([3,3]);
-      ctx.stroke(); ctx.setLineDash([]);
-      ctx.beginPath();
-      ctx.roundRect?ctx.roundRect(bx2,badgeTop,bw,bh,6):(function(){ctx.moveTo(bx2+6,badgeTop);ctx.arcTo(bx2+bw,badgeTop,bx2+bw,badgeTop+bh,6);ctx.arcTo(bx2+bw,badgeTop+bh,bx2,badgeTop+bh,6);ctx.arcTo(bx2,badgeTop+bh,bx2,badgeTop,6);ctx.arcTo(bx2,badgeTop,bx2+bw,badgeTop,6);ctx.closePath();})();
-      ctx.fillStyle=bcFill; ctx.fill();
-      ctx.strokeStyle=bc; ctx.lineWidth=1.5; ctx.stroke();
-      ctx.fillStyle=isPast?'#2d6a2d':'rgba(45,106,45,0.5)';
-      ctx.font='bold 10px system-ui'; ctx.textAlign='center';
-      ctx.fillText(txt,x,badgeTop+12);
-      ctx.font='8px system-ui'; ctx.fillText(sub,x,badgeTop+24);
-      mi++;
+      var bc=isPast?'#2d6a2d':'rgba(45,106,45,0.45)';
+      var cy=P.t+ch+18;
+      ctx.beginPath(); ctx.arc(x,cy,9,0,Math.PI*2);
+      ctx.fillStyle=bc; ctx.fill();
+      ctx.fillStyle='#fff'; ctx.font='bold 10px system-ui'; ctx.textAlign='center';
+      ctx.fillText(mi+1, x, cy+3.5);
     });
   }
 
