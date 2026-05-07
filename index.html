@@ -19,6 +19,7 @@ input,select{width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radi
 input[type=range]#nFactor{-webkit-appearance:none;appearance:none;background:transparent}
 input[type=range]#nFactor::-webkit-slider-runnable-track{height:8px;border-radius:4px;background:linear-gradient(to right,#1a56a0 calc((var(--v,0.6)/0.9)*100%),#d1d5db calc((var(--v,0.6)/0.9)*100%))}
 input[type=range]#nFactor::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#1a56a0;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.25);margin-top:-9px;cursor:pointer}
+input[type=range]#nFactor{touch-action:none}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:480px){.row2{grid-template-columns:1fr}}
 .app-box{border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-top:10px;background:#fafafa}
@@ -862,6 +863,12 @@ function _renderHistTable(){
   var th=gv('hist-th-cur'); if(th) th.innerHTML='N Rem. '+STAGES[curIdx].l+'<br><span style="font-weight:400;font-size:10px">lb/ac</span>';
   gv('hist-section').style.display='';
 }
+
+// Prevent page scroll while dragging the N factor slider on mobile
+(function(){
+  var sl=gv('nFactor');
+  if(sl) sl.addEventListener('touchmove',function(e){e.preventDefault();},{passive:false});
+})();
 
 function toggleHist(){
   var wrap=gv('hist-table-wrap'), btn=gv('hist-toggle');
