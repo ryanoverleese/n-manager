@@ -97,7 +97,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
   <label>Previous Crop</label>
   <select id="prevCrop">
     <option value="corn">Corn</option>
-    <option value="soy">Soybean (+50 lb N/acre credit)</option>
+    <option value="soy">Soybean (+25 lb N/acre credit)</option>
     <option value="other">Other</option>
   </select>
   <label>Planting Date</label>
@@ -224,6 +224,19 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
       </div>
     </div>
     <div id="n-loss-breakdown" style="display:none;margin-top:10px;padding:10px 12px;background:#fafafa;border-radius:8px;border:1px solid #e5e7eb"></div>
+    <div style="margin-top:6px">
+      <button onclick="var d=gv('how-calc');d.style.display=d.style.display==='none'?'block':'none';this.textContent=d.style.display==='none'?'▸ How is this calculated?':'▾ How is this calculated?'" style="background:none;border:none;color:#6b7280;font-size:11px;cursor:pointer;padding:2px 0">▸ How is this calculated?</button>
+      <div id="how-calc" style="display:none;margin-top:8px;padding:10px 12px;background:#f8fafc;border-radius:8px;border:1px solid #e5e7eb;font-size:12px;color:#374151;line-height:1.6">
+        <strong>Applied N</strong> — exactly what you entered for each application.<br><br>
+        <strong>Mineralization</strong> — OM% × 20 lb/ac, a static seasonal estimate of N released from soil organic matter decomposition. (Hergert, UNL EC117)<br><br>
+        <strong>Previous crop credit</strong> — 25 lb/ac for soybean, reflecting residual N from nodule breakdown. (UNL EC117, NRCS)<br><br>
+        <strong>Leaching</strong> — When a single rain event exceeds 1.5", nitrogen is pushed below the root zone. Larger events cause proportionally more loss, up to 20% of available N per event.<br><br>
+        <strong>Denitrification</strong> — After 3+ consecutive days of saturated soil, soil bacteria convert NO₃ to gas in the absence of oxygen, losing an estimated 2.5% of available N per day.<br><br>
+        <strong>N uptake curve</strong> — Ciampitti &amp; Vyn (2013): 43% of total N uptake occurs after VT in modern high-yield hybrids. Pre-VT distribution follows the same research.<br><br>
+        <strong>VT minimum</strong> — 43% of total seasonal N demand must be available at VT/R1 to complete grain fill.<br><br>
+        <strong>50-year weather bands</strong> — Open-Meteo historical daily precipitation for your county, 1973–present, run through the same leaching and denitrification model. Bands show 10th, 25th, 50th, 75th, and 90th percentile outcomes across all years.
+      </div>
+    </div>
   </div>
 
   <div class="section" id="hist-section" style="display:none">
@@ -295,7 +308,7 @@ function calculate() {
   var nFactor = Math.max(0.5, Math.min(1.4, num('nFactor') || 1.1));
   var demand = yg * nFactor;
   var omCredit = om * 20;
-  var prevCredit = prevCrop === 'soy' ? 50 : 0;
+  var prevCredit = prevCrop === 'soy' ? 25 : 0;
   var appliedN = ppRate + sdRate + f1 + f2 + f3;
   var lossPct = leach * 10 + (sat ? 15 : 0);
   if (lossPct > 50) lossPct = 50;
@@ -323,7 +336,7 @@ function calculate() {
 
   var rows = [];
   rows.push({l:'Total Crop N Demand', v:demand.toFixed(0), c:''});
-  if (prevCrop==='soy') rows.push({l:'Previous Crop Credit (Soy)', v:'+50', c:'cr'});
+  if (prevCrop==='soy') rows.push({l:'Previous Crop Credit (Soy)', v:'+25', c:'cr'});
   rows.push({l:'OM Mineralization', v:'+'+omCredit.toFixed(0), c:'cr'});
   if (ppRate>0) rows.push({l:'Pre-plant', v:'+'+ppRate.toFixed(0), c:'cr'});
   if (sdRate>0) rows.push({l:'Sidedress', v:'+'+sdRate.toFixed(0), c:'cr'});
