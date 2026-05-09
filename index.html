@@ -566,20 +566,20 @@ function _renderGauge(d){
     var adjBg,adjBorder,adjLeftBorder,adjColor,adjHero,adjSub,adjRec;
     if(Math.abs(extraLostVsPlan)<=8){
       adjBg='#f0fdf4'; adjBorder='#bbf7d0'; adjLeftBorder='#16a34a'; adjColor='#14532d';
-      adjHero='Weather losses on plan';
-      adjSub=isShort?'Your N shortfall is from your application plan, not weather losses.':'Losses matched expectations — you\'re in good shape.';
+      adjHero='Average season';
+      adjSub=isShort?'N shortfall is from your application plan, not the weather.':'Weather is tracking as expected.';
       adjRec='';
     } else if(extraLostVsPlan>0){
       adjBg='#fff5f5'; adjBorder='#fecaca'; adjLeftBorder='#dc2626'; adjColor='#7f1d1d';
-      adjHero='Losses running '+extraLostVsPlan+' lb above plan';
-      adjSub='More N lost to weather than expected.';
-      adjRec=isShort?'This has contributed to your shortfall — apply to close the gap.':'Keep remaining applications on schedule to compensate.';
+      adjHero='Tough season — ~'+extraLostVsPlan+' lb more N lost than expected';
+      adjSub='More leaching or denitrification than your plan assumed.';
+      adjRec=isShort?'This is contributing to your shortfall — apply to close the gap.':'Keep your remaining applications on schedule.';
     } else {
       var absExtra=Math.abs(extraLostVsPlan);
       adjBg='#f0fdf4'; adjBorder='#bbf7d0'; adjLeftBorder='#16a34a'; adjColor='#14532d';
-      adjHero='Losses running '+absExtra+' lb below plan';
-      adjSub='Weather has been easier on N than expected.';
-      adjRec=isShort?'Despite favorable weather, you\'re still short — apply '+Math.round(Math.abs(d.surplus)+10)+' lb to catch up.':'Good position — you may be able to trim ~'+absExtra+' lb from remaining passes.';
+      adjHero='Easy season — ~'+absExtra+' lb more N retained than expected';
+      adjSub='Less leaching than your plan assumed.';
+      adjRec=isShort?'Even so, you\'re still short — apply '+Math.round(Math.abs(d.surplus)+10)+' lb to catch up.':'You may be able to trim ~'+absExtra+' lb from remaining passes.';
     }
 
     html+='<div style="background:'+adjBg+';border:1.5px solid '+adjBorder+';border-left:5px solid '+adjLeftBorder+';border-radius:10px;padding:16px 18px;margin-bottom:14px">';
