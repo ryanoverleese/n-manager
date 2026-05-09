@@ -4,7 +4,7 @@ exports.handler = async function(event) {
     return { statusCode: 400, body: JSON.stringify({ error: 'lat and lng required' }) };
   }
 
-  const sql = `SELECT TOP 1 co.compname, co.hydgrp, co.drainagecl, ch.om_r, ch.texture
+  const sql = `SELECT TOP 1 co.compname, co.hydgrp, co.drainagecl, ch.om_r, ch.texcl
     FROM mapunit mu
     INNER JOIN component co ON mu.mukey = co.mukey
     INNER JOIN chorizon ch ON co.cokey = ch.cokey
