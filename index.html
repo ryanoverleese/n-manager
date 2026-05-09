@@ -100,6 +100,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
       </div>
     </div>
     <div><label>Soil OM (%)</label><input type="number" id="om" value="2.8" min="0.5" max="8" step="0.1"><div class="hint">OM × 20 = lb N/acre credit</div></div>
+    <div><label>Soil Residual NO₃-N (lb/acre)</label><input type="number" id="soilResidual" value="0" min="0" max="300"><div class="hint">From 0–24" pre-plant soil test. 0 if not tested.</div></div>
     <div>
       <label>Soil Texture</label>
       <select id="soilTexture" onchange="updateTextureUI();calculate()">
@@ -365,12 +366,13 @@ function calculate() {
   var demand = yg * nFactor;
   var omCredit = om * 20 * tex.minMult;
   var prevCredit = prevCrop === 'soy' ? 25 : 0;
+  var soilResidual = num('soilResidual');
   var appliedN = ppRate + sdRate + f1 + f2 + f3;
   var leachPct = leach===0 ? 0 : leach===1 ? tex.leach1Pct : tex.leach2Pct;
   var lossPct = leachPct + (sat ? tex.satPct : 0);
   if (lossPct > 65) lossPct = 65;
   var losses = appliedN * lossPct / 100;
-  var totalAvail = appliedN + omCredit + prevCredit - losses;
+  var totalAvail = appliedN + omCredit + prevCredit + soilResidual - losses;
   var uptakeToDate = demand * stagePct / 100;
   var remaining = totalAvail - uptakeToDate;
   var stillNeeded = demand * (1 - stagePct / 100);
@@ -395,6 +397,7 @@ function calculate() {
   rows.push({l:'Total Crop N Demand', v:demand.toFixed(0), c:''});
   if (prevCrop==='soy') rows.push({l:'Previous Crop Credit (Soy)', v:'+25', c:'cr'});
   rows.push({l:'OM Mineralization', v:'+'+omCredit.toFixed(0), c:'cr'});
+  if (soilResidual>0) rows.push({l:'Soil Residual NO₃-N', v:'+'+soilResidual.toFixed(0), c:'cr'});
   if (ppRate>0) rows.push({l:'Pre-plant', v:'+'+ppRate.toFixed(0), c:'cr'});
   if (sdRate>0) rows.push({l:'Sidedress', v:'+'+sdRate.toFixed(0), c:'cr'});
   if (f1>0) rows.push({l:'Fertigation 1', v:'+'+f1.toFixed(0), c:'cr'});
@@ -458,12 +461,14 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
   var ppR=num('pp-rate'),sdR=num('sd-rate'),f1R=num('f1-rate'),f2R=num('f2-rate'),f3R=num('f3-rate');
   var texD=TEXTURES[gv('soilTexture').value]||TEXTURES.loam;
   var omCr=num('om')*20*texD.minMult, prevCr=gv('prevCrop').value==='soy'?25:0;
+  var soilRes=num('soilResidual');
   var leachV=parseInt(document.querySelector('input[name=leach]:checked').value);
   var leachPctD=leachV===0?0:leachV===1?texD.leach1Pct:texD.leach2Pct;
   var lossP=Math.min(65,leachPctD+(gv('saturated').checked?texD.satPct:0));
   var lm=1-lossP/100;
   // appPool[stageIdx] = net N added to pool at that stage
-  var appPool={0:(ppR+omCr+prevCr)*lm};
+  // soilRes has no loss multiplier — already in ground at test time
+  var appPool={0:(ppR+omCr+prevCr)*lm+soilRes};
   if(sdR>0)appPool[2]=sdR*lm;
   if(f1R>0)appPool[3]=f1R*lm;
   if(f2R>0)appPool[4]=f2R*lm;
@@ -555,7 +560,7 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
   if(_raf)cancelAnimationFrame(_raf);
   var lossesInput=Math.round((ppR+sdR+f1R+f2R+f3R)*lossP/100);
   _chart={canvas:canvas,W:W,H:H,P:P,cw:cw,ch:ch,n:n,demand:demand,totalAvail:totalAvail,surplus:surplus,remVals:remVals,stagedRemVals:stagedRemVals,appMarkers:appMarkers,appPool:appPool,curIdx:curIdx,maxY:maxY,minY:minY,span:span,xp:xp,yp:yp,rpts:rpts,vtTarget:vtTarget,lc:lc,lca:lca,ok:ok,dpr:dpr,
-    _sources:{prePlant:Math.round(ppR),sidedress:Math.round(sdR),fert1:Math.round(f1R),fert2:Math.round(f2R),fert3:Math.round(f3R),mineralization:Math.round(omCr),prevCrop:Math.round(prevCr),inputLosses:lossesInput}};
+    _sources:{prePlant:Math.round(ppR),sidedress:Math.round(sdR),fert1:Math.round(f1R),fert2:Math.round(f2R),fert3:Math.round(f3R),mineralization:Math.round(omCr),prevCrop:Math.round(prevCr),soilResidual:Math.round(soilRes),inputLosses:lossesInput}};
 
   var startTs=null, dur=1100;
   _raf=requestAnimationFrame(function step(ts){
@@ -961,6 +966,7 @@ async function fetchWeatherBands(){
             +(s.fert3?row('Fertigation 3','+'+s.fert3+' lb/ac','#16a34a'):'')
             +row('Mineralization (OM)','+'+s.mineralization+' lb/ac','#16a34a','OM × 20')
             +(s.prevCrop?row('Previous crop credit','+'+s.prevCrop+' lb/ac','#16a34a','soybean'):'')
+            +(s.soilResidual?row('Soil residual NO₃-N','+'+s.soilResidual+' lb/ac','#16a34a','soil test'):'')
             +(totalLost>0?'<tr><td colspan="3" style="border-top:1px solid #e5e7eb;padding:6px 0 4px;font-size:10px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.04em">Losses (weather-estimated)</td></tr>':'')
             +(ll>0?row('Leaching','−'+ll+' lb/ac','#b45309',cm.leachEvents+' event'+(cm.leachEvents!==1?'s':'')+' &gt;'+tex.leachThresh+'"'):'')
             +(dl>0?row('Denitrification','−'+dl+' lb/ac','#7c3aed','saturated soil days'):'')
