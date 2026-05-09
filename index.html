@@ -430,10 +430,10 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus) {
 
   _chart={demand:demand,totalAvail:totalAvail,surplus:surplus,stagedRemVals:stagedRemVals,
     appPool:appPool,curIdx:curIdx,vtTarget:vtTarget,appMarkers:appMarkers,
-    _rawRates:{pp:ppR,sd:sdR,f1:f1R,f2:f2R,f3:f3R,omCr:omCr,prevCr:prevCr,soilRes:soilRes},
+    _rawRates:{pp:ppR,sd:sdR,f1:f1R,f2:f2R,f3:f3R,pvt:pvtR,omCr:omCr,prevCr:prevCr,soilRes:soilRes},
     _texD:texD,
     _planLossPct:lossP,
-    _appliedN:ppR+sdR+f1R+f2R+f3R,
+    _appliedN:ppR+sdR+f1R+f2R+f3R+pvtR,
     _sources:{prePlant:Math.round(ppR),sidedress:Math.round(sdR),fert1:Math.round(f1R),fert2:Math.round(f2R),fert3:Math.round(f3R),mineralization:Math.round(omCr),prevCrop:Math.round(prevCr),soilResidual:Math.round(soilRes),inputLosses:Math.round((ppR+sdR+f1R+f2R+f3R)*lossP/100)}};
 
   // App legend
@@ -657,6 +657,114 @@ function _renderGauge(d){
 
 var _STAGE_DAYS_SIM = [7, 21, 35, 49, 63, 75, 83, 93, 103, 113, 125];
 
+// ── Cohort-based loss model ──────────────────────────────────────────────────
+
+// Nitrification lag by product: returns {lagDays, rampDays}
+// During lagDays, N is in NH4 form — protected from leaching/denitrification.
+// After lag, susceptibility ramps exponentially over rampDays.
+function _getNitrifLag(productStr){
+  var p=(productStr||'').toLowerCase();
+  if(p.indexOf('anhydrous')!==-1) return {lagDays:15,rampDays:10}; // slow NH4→NO3
+  if(p.indexOf('urea')!==-1&&p.indexOf('uan')===-1) return {lagDays:5,rampDays:5}; // hydrolysis first
+  return {lagDays:0,rampDays:2}; // UAN, AMS, fertigation — already ~50% NO3
+}
+
+// Antecedent wetness index — daily precip adds moisture, ET decays it.
+// Used to scale leaching severity: wet soil loses more per event.
+function _buildWetnessArr(precipMm){
+  var arr=[],w=0;
+  for(var i=0;i<precipMm.length;i++){
+    w+=(precipMm[i]||0)/25.4;
+    w*=0.85; // ~15% daily ET decay
+    arr.push(w);
+  }
+  return arr;
+}
+
+// Simulate one N cohort: amount applied on startDay, with nitrification lag.
+// Only the susceptible (NO3) fraction is exposed to leaching and denitrification.
+function _simCohort(amount,startDay,lagDays,rampDays,precipMm,tex,wetnessArr){
+  var t=tex||TEXTURES.loam;
+  var avail=0,satDays=0,prevDay=0;
+  var leachLoss=0,denitrLoss=0,leachEvents=0;
+  var result=[];
+  for(var s=0;s<STAGES.length;s++){
+    var dayEnd=_STAGE_DAYS_SIM[s];
+    for(var day=prevDay;day<dayEnd&&day<precipMm.length;day++){
+      if(day===startDay) avail=amount;
+      if(avail<=0){satDays=Math.max(0,satDays-1);continue;}
+      var p=(precipMm[day]||0)/25.4;
+      // Susceptibility: 0 during NH4 lag, exponential ramp to 1 as it nitrifies
+      var daysSince=day-startDay;
+      var susc=0;
+      if(daysSince>=lagDays){
+        susc=rampDays>0?Math.min(1,1-Math.exp(-3*(daysSince-lagDays)/rampDays)):1;
+      }
+      var wetness=wetnessArr[day]||0;
+      if(p>t.leachThresh&&susc>0){
+        // Wetness amplifies loss magnitude (not threshold) — wetter soil loses more per event
+        var leachFrac=Math.min(t.leachMax,(p-t.leachThresh)*t.leachRate*(1+wetness*0.3));
+        var lost=avail*susc*leachFrac;
+        avail-=lost; leachLoss+=lost;
+        satDays=Math.min(satDays+2,6); leachEvents++;
+      } else { satDays=Math.max(0,satDays-1); }
+      if(satDays>=t.denitrDays&&susc>0){
+        var dlost=avail*susc*t.denitrRate;
+        avail-=dlost; denitrLoss+=dlost; satDays=1;
+      }
+      if(avail<0)avail=0;
+    }
+    prevDay=dayEnd;
+    result.push(avail); // N remaining in this cohort at stage boundary
+  }
+  result._meta={leachLoss:leachLoss,denitrLoss:denitrLoss,leachEvents:leachEvents};
+  return result;
+}
+
+// Sum all cohorts, subtract crop demand at each stage.
+function _simCohorts(cohorts,demand,precipMm,tex){
+  var wetnessArr=_buildWetnessArr(precipMm);
+  var totalPrecipIn=precipMm.reduce(function(s,v){return s+(v||0);},0)/25.4;
+  var cohortResults=cohorts.map(function(c){
+    return _simCohort(c.amount,c.startDay,c.lagDays,c.rampDays,precipMm,tex,wetnessArr);
+  });
+  var result=STAGES.map(function(st,si){
+    var total=cohortResults.reduce(function(sum,cr){return sum+(cr[si]||0);},0);
+    return total-demand*st.pct/100;
+  });
+  var totLeach=0,totDenitr=0,totEvents=0;
+  cohortResults.forEach(function(cr){
+    if(cr._meta){totLeach+=cr._meta.leachLoss;totDenitr+=cr._meta.denitrLoss;totEvents+=cr._meta.leachEvents;}
+  });
+  result._meta={leachLoss:totLeach,denitrLoss:totDenitr,leachEvents:totEvents,totalPrecipIn:totalPrecipIn};
+  return result;
+}
+
+// Build cohort array from current _chart inputs + application dates.
+function _buildCohorts(rr,plantDateStr){
+  function dayOffset(aDate){
+    if(!aDate||!plantDateStr)return null;
+    return Math.max(0,Math.round((new Date(aDate)-new Date(plantDateStr))/86400000));
+  }
+  var cohorts=[];
+  // Soil credits: already mineralized / in NO3 form on day 0
+  var credits=rr.omCr+rr.prevCr+rr.soilRes;
+  if(credits>0)cohorts.push({amount:credits,startDay:0,lagDays:0,rampDays:1});
+  // Applied N: each app gets its own cohort starting from its application date
+  if(rr.pp>0){var l=_getNitrifLag(gv('pp-prod').value),d=dayOffset(gv('pp-date').value);
+    cohorts.push({amount:rr.pp,startDay:d!==null?d:0,lagDays:l.lagDays,rampDays:l.rampDays});}
+  if(rr.sd>0){var l2=_getNitrifLag(gv('sd-prod').value),d2=dayOffset(gv('sd-date').value);
+    cohorts.push({amount:rr.sd,startDay:d2!==null?d2:35,lagDays:l2.lagDays,rampDays:l2.rampDays});}
+  [['f1',50],['f2',65],['f3',80]].forEach(function(pair){
+    var id=pair[0],def=pair[1],rate=rr[id];
+    if(rate>0){var l3=_getNitrifLag(gv(id+'-prod').value),d3=dayOffset(gv(id+'-date').value);
+      cohorts.push({amount:rate,startDay:d3!==null?d3:def,lagDays:l3.lagDays,rampDays:l3.rampDays});}
+  });
+  if(rr.pvt>0){var l4=_getNitrifLag(gv('pvt-prod').value),d4=dayOffset(gv('pvt-date').value);
+    cohorts.push({amount:rr.pvt,startDay:d4!==null?d4:90,lagDays:l4.lagDays,rampDays:l4.rampDays});}
+  return cohorts;
+}
+
 function _pctile(arr, p){
   var s=arr.slice().sort(function(a,b){return a-b;});
   var idx=Math.min(Math.floor(s.length*p), s.length-1);
@@ -778,28 +886,17 @@ async function fetchWeatherBands(){
           for(var s=0;s<_STAGE_DAYS_SIM.length;s++){if(dayN<=_STAGE_DAYS_SIM[s]){stageForDay=s;break;} stageForDay=s;}
           stagePrecip[stageForDay]+=(cpPrecip[i]||0)/25.4;
         }
-        // Simulate current-season N losses from actual precip
-        var curSim=_simYear(_chart.demand,_chart.totalAvail,cpPrecipMm,tex);
+        // Cohort-based simulation: each application runs from its own date,
+        // only susceptible NO3 fraction exposed to weather losses.
+        var rr=_chart._rawRates;
+        var cohorts=_buildCohorts(rr,gv('plantDate').value);
+        var curSim=_simCohorts(cohorts,_chart.demand,cpPrecipMm,tex);
         var cm=curSim._meta;
-
-        // Update main N-remaining line with actual weather-computed losses
-        if(cm&&_chart._rawRates&&_chart.totalAvail>0){
-          var wLossPct=Math.min(65,(cm.leachLoss+cm.denitrLoss)/_chart.totalAvail*100);
-          _weatherLossPct=wLossPct;
-          var wlm=1-wLossPct/100;
-          var rr=_chart._rawRates;
-          var wPool={0:(rr.pp+rr.omCr+rr.prevCr)*wlm+rr.soilRes};
-          if(rr.sd>0)wPool[2]=rr.sd*wlm;
-          if(rr.f1>0)wPool[3]=rr.f1*wlm;
-          if(rr.f2>0)wPool[4]=rr.f2*wlm;
-          if(rr.f3>0)wPool[5]=rr.f3*wlm;
-          var wStagPool=0;
-          _chart.stagedRemVals=STAGES.map(function(s,si){
-            if(wPool[si]!==undefined)wStagPool+=wPool[si];
-            return wStagPool-_chart.demand*s.pct/100;
-          });
-          _chart.appPool=wPool;
-        }
+        _chart.stagedRemVals=curSim;
+        _chart._cohorts=cohorts;
+        // Weather loss % vs plan for hero card (losses / total applied N)
+        var appliedN=(rr.pp||0)+(rr.sd||0)+(rr.f1||0)+(rr.f2||0)+(rr.f3||0)+(rr.pvt||0);
+        if(appliedN>0) _weatherLossPct=Math.min(65,(cm.leachLoss+cm.denitrLoss)/appliedN*100);
         var lossEl=gv('n-loss-breakdown');
         if(lossEl&&cm&&_chart._sources){
           var s=_chart._sources;
@@ -895,15 +992,15 @@ async function fetchWeatherBands(){
             for(var s2=0;s2<_STAGE_DAYS_SIM.length;s2++){if(dayN<=_STAGE_DAYS_SIM[s2]){stageForDay=s2;break;}}
             if(stageForDay>_chart.curIdx) stagePrecip[stageForDay]+=(fcPrecipMm[fi]||0)/25.4;
           }
-          // Compute forecast impact as delta: (with forecast) - (without forecast)
-          // This preserves staged applications while correctly bending the line for rain
-          var pastOnlySim=_simYear(_chart.demand,_chart.totalAvail,cpPrecipMm,tex);
+          // Forecast delta: run cohorts with past+forecast precip, apply difference
+          // to future stages only. Preserves actual past losses already computed.
           var combinedPrecipMm=cpPrecipMm.concat(fcPrecipMm);
-          var fcSim=_simYear(_chart.demand,_chart.totalAvail,combinedPrecipMm,tex);
+          var fcSim=_simCohorts(cohorts,_chart.demand,combinedPrecipMm,tex);
+          var prevRemVals=_chart.stagedRemVals.slice();
           _chart.stagedRemVals=STAGES.map(function(st,si){
-            if(si<=_chart.curIdx) return _chart.stagedRemVals[si];
-            var forecastDelta=fcSim[si]-pastOnlySim[si]; // negative = more loss from forecast rain
-            return _chart.stagedRemVals[si]+forecastDelta;
+            if(si<=_chart.curIdx) return prevRemVals[si];
+            var forecastDelta=fcSim[si]-curSim[si];
+            return prevRemVals[si]+forecastDelta;
           });
         }
       }catch(e3){/* forecast unavailable — prediction uses texture default */}
