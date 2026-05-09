@@ -227,7 +227,6 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
     <canvas id="curve" height="340"></canvas>
     <div class="chart-legend">
       <span class="leg-item"><span class="leg-solid"></span> N Remaining</span>
-      <span class="leg-item"><span class="leg-dash"></span> Projected to VT</span>
     </div>
     <div id="app-legend" style="display:none;margin-top:8px;display:flex;gap:12px;flex-wrap:wrap"></div>
     <div id="weather-status" style="display:none;font-size:11px;color:#9ca3af;margin-top:6px"></div>
@@ -638,30 +637,7 @@ function _render(prog, hover){
   }
 
 
-  // Future confidence band — only to VT (the only benchmark)
   var vtEnd=Math.min(vtIdx,n-1);
-  if(curIdx<vtEnd){
-    ctx.beginPath(); ctx.moveTo(rpts[curIdx].x,rpts[curIdx].y);
-    for(var i=curIdx+1;i<=vtEnd;i++){var f=(i-curIdx)/(vtEnd-curIdx),sp=ch*0.07*f; ctx.lineTo(rpts[i].x,rpts[i].y-sp);}
-    for(var i=vtEnd;i>=curIdx;i--){var f=(i-curIdx)/(vtEnd-curIdx),sp=ch*0.07*f; ctx.lineTo(rpts[i].x,rpts[i].y+sp);}
-    ctx.closePath(); ctx.fillStyle=lca+'0.11)'; ctx.fill();
-  }
-
-  // Future dashed line — only to VT, segmented with sharp jumps at applications
-  if(curIdx<vtEnd){
-    _getSegs(curIdx,vtEnd).forEach(function(seg){
-      if(seg.pts.length<2)return;
-      ctx.beginPath(); _spline(ctx,seg.pts,0,seg.pts.length-1);
-      ctx.strokeStyle=lca+'0.48)'; ctx.lineWidth=2.5; ctx.setLineDash([8,5]);
-      ctx.shadowColor=lca+'0.3)'; ctx.shadowBlur=6;
-      ctx.stroke(); ctx.setLineDash([]); ctx.shadowBlur=0;
-      if(seg.jx!==null){
-        ctx.beginPath(); ctx.moveTo(seg.jx,seg.jFrom); ctx.lineTo(seg.jx,seg.jTo);
-        ctx.strokeStyle=lca+'0.48)'; ctx.lineWidth=2.5; ctx.setLineDash([8,5]);
-        ctx.stroke(); ctx.setLineDash([]);
-      }
-    });
-  }
 
   // Past solid line — segmented with sharp jumps at applications
   if(curIdx>0){
