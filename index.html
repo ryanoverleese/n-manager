@@ -226,9 +226,8 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
   </div>
 
 <div class="section" id="viz-gauge">
-  <h2>VT/R1 Outlook</h2>
+  <h2>Season Outlook</h2>
   <div id="gauge-view"></div>
-  <div id="vt-rec" style="display:none;margin-top:12px;padding:14px 16px;border-radius:10px;border:1px solid #bbf7d0;border-left:5px solid #16a34a;font-size:13px;line-height:1.5"></div>
 </div>
 
 <div id="weather-status" style="display:none;font-size:11px;color:#9ca3af;margin:6px 16px 0"></div>
@@ -434,6 +433,8 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus) {
     appPool:appPool,curIdx:curIdx,vtTarget:vtTarget,appMarkers:appMarkers,
     _rawRates:{pp:ppR,sd:sdR,f1:f1R,f2:f2R,f3:f3R,omCr:omCr,prevCr:prevCr,soilRes:soilRes},
     _texD:texD,
+    _planLossPct:lossP,
+    _appliedN:ppR+sdR+f1R+f2R+f3R,
     _sources:{prePlant:Math.round(ppR),sidedress:Math.round(sdR),fert1:Math.round(f1R),fert2:Math.round(f2R),fert3:Math.round(f3R),mineralization:Math.round(omCr),prevCrop:Math.round(prevCr),soilResidual:Math.round(soilRes),inputLosses:Math.round((ppR+sdR+f1R+f2R+f3R)*lossP/100)}};
 
   // App legend
@@ -527,171 +528,130 @@ function _renderTimeline(d){
 
 function _renderGauge(d){
   var el=gv('gauge-view'); if(!el)return;
-  var sv=d.stagedRemVals, ci=d.curIdx, vtTarget=d.vtTarget, demand=d.demand;
-  var vtProjected=Math.round(sv[6]||0);
-  var vtMin=Math.round(vtTarget||0);
-  var vtSurplus=vtProjected-vtMin;
-  var vtWorst=d.bands?Math.round(d.bands.p10[6]||0):null;
-  var barMax=Math.max(demand,vtProjected+30);
+  var sv=d.stagedRemVals, ci=d.curIdx, demand=d.demand;
   var curRemaining=Math.round(sv[ci]||0);
-
-  var surpColor=vtSurplus>=0?'#16a34a':'#dc2626';
-  var surpBg=vtSurplus>=0?'#f0fdf4':'#fff5f5';
-  var surpBorder=vtSurplus>=0?'#bbf7d0':'#fecaca';
-
-  var vtDate=d._vtDate||null, vtDaysOut=d._vtDaysOut||null, accumGDU=d._accumGDU||null;
+  var eosRemaining=Math.round(sv[STAGES.length-1]||0); // end-of-season projected surplus/deficit
   var html='';
 
-  // VT date prediction banner (if we have it)
+  // VT / tassel date prediction banner
+  var vtDate=d._vtDate||null, vtDaysOut=d._vtDaysOut||null, accumGDU=d._accumGDU||null;
   if(vtDate&&vtDate!=='reached'){
     html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;margin-bottom:12px">';
-    html+='<div style="font-size:22px">🌽</div>';
+    html+='<div style="font-size:22px">&#127807;</div>';
     html+='<div>';
-    html+='<div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.05em">VT Predicted</div>';
+    html+='<div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.05em">Tassel (VT) Predicted</div>';
     html+='<div style="font-size:18px;font-weight:800;color:#78350f">'+vtDate+(vtDaysOut?' <span style="font-size:12px;font-weight:500;color:#b45309">('+vtDaysOut+' days)</span>':'')+'</div>';
-    if(accumGDU!==null) html+='<div style="font-size:10px;color:#b45309">'+accumGDU+' GDU accumulated · 1,300 needed</div>';
+    if(accumGDU!==null) html+='<div style="font-size:10px;color:#b45309">'+accumGDU+' GDU accumulated &middot; 1,300 needed</div>';
     html+='</div></div>';
   } else if(vtDate==='reached'){
     html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;margin-bottom:12px">';
-    html+='<div style="font-size:22px">🌽</div>';
-    html+='<div><div style="font-size:11px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.05em">VT Reached</div>';
-    if(accumGDU!==null) html+='<div style="font-size:10px;color:#16a34a">'+accumGDU+' GDU — at or past tassel</div>';
+    html+='<div style="font-size:22px">&#127807;</div>';
+    html+='<div><div style="font-size:11px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.05em">Tassel Reached</div>';
+    if(accumGDU!==null) html+='<div style="font-size:10px;color:#16a34a">'+accumGDU+' GDU &mdash; at or past tassel</div>';
     html+='</div></div>';
   }
 
-  // Stat row
-  html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">';
-  html+='<div style="background:#f8fafc;border-radius:8px;padding:10px 12px">';
-  html+='<div style="font-size:10px;font-weight:600;color:#9ca3af;margin-bottom:2px">Now ('+STAGES[ci].l+')</div>';
-  html+='<div style="font-size:22px;font-weight:800;color:#1a56a0;line-height:1">'+curRemaining+'</div>';
-  html+='<div style="font-size:10px;color:#9ca3af">lb/ac</div>';
-  html+='</div>';
+  // ── Season Adjustment Hero ───────────────────────────────────────────────
+  // Compares actual weather losses vs what the plan assumed (texture default %)
+  if(_weatherLossPct!==null&&d._planLossPct!==undefined&&d._appliedN!==undefined){
+    var planLossPct=d._planLossPct;
+    var actualLossPct=_weatherLossPct;
+    var appliedN=d._appliedN;
+    var planLossLb=appliedN*planLossPct/100;
+    var actualLossLb=appliedN*actualLossPct/100;
+    var extraLostVsPlan=Math.round(actualLossLb-planLossLb);
+    // extraLostVsPlan > 0: more was lost than assumed → add to remaining passes
+    // extraLostVsPlan < 0: less was lost → can trim remaining passes
 
-  html+='<div style="background:#f8fafc;border-radius:8px;padding:10px 12px">';
-  html+='<div style="font-size:10px;font-weight:600;color:#9ca3af;margin-bottom:2px">At VT (proj.)</div>';
-  html+='<div style="font-size:22px;font-weight:800;color:#1a56a0;line-height:1">'+vtProjected+'</div>';
-  html+='<div style="font-size:10px;color:#9ca3af">lb/ac</div>';
-  html+='</div>';
+    var adjBg,adjBorder,adjLeftBorder,adjColor,adjHero,adjSub,adjRec;
+    if(Math.abs(extraLostVsPlan)<=8){
+      adjBg='#f0fdf4'; adjBorder='#bbf7d0'; adjLeftBorder='#16a34a'; adjColor='#14532d';
+      adjHero='On Plan';
+      adjSub='N losses match your plan\'s weather assumption.';
+      adjRec='No adjustment to remaining applications needed.';
+    } else if(extraLostVsPlan>0){
+      adjBg='#fff5f5'; adjBorder='#fecaca'; adjLeftBorder='#dc2626'; adjColor='#7f1d1d';
+      adjHero='+'+extraLostVsPlan+' lb more lost than planned';
+      adjSub='This season\'s weather lost more N than your plan assumed.';
+      adjRec='Consider adding ~'+extraLostVsPlan+' lb across remaining passes to stay on track.';
+    } else {
+      adjBg='#f0fdf4'; adjBorder='#bbf7d0'; adjLeftBorder='#16a34a'; adjColor='#14532d';
+      adjHero=Math.abs(extraLostVsPlan)+' lb less lost than planned';
+      adjSub='Fewer losses than your plan assumed — conditions have been favorable.';
+      adjRec='You can trim ~'+Math.abs(extraLostVsPlan)+' lb from remaining applications.';
+    }
 
-  html+='<div style="background:'+surpBg+';border:1px solid '+surpBorder+';border-radius:8px;padding:10px 12px">';
-  html+='<div style="font-size:10px;font-weight:600;color:#9ca3af;margin-bottom:2px">vs Min ('+vtMin+' lb)</div>';
-  html+='<div style="font-size:22px;font-weight:800;color:'+surpColor+';line-height:1">'+(vtSurplus>=0?'+':'')+vtSurplus+'</div>';
-  html+='<div style="font-size:10px;color:#9ca3af">lb/ac</div>';
-  html+='</div>';
-  html+='</div>';
-
-  // Horizontal gauge bar
-  var vtMinPct=Math.max(0,Math.min(100,(vtMin/barMax)*100));
-  var vtProjPct=Math.max(0,Math.min(100,(vtProjected/barMax)*100));
-  var vtWorstPct=vtWorst!==null?Math.max(0,Math.min(100,(vtWorst/barMax)*100)):null;
-
-  // Zone fills: red 0→min, yellow min→proj (if surplus>0), green proj+
-  var fillColor=vtSurplus>=0?'#16a34a':'#dc2626';
-
-  html+='<div style="margin-bottom:8px">';
-  html+='<div style="font-size:10px;font-weight:600;color:#9ca3af;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em">N at VT — projected vs. minimum needed</div>';
-  html+='<div style="position:relative;height:28px;background:#f3f4f6;border-radius:6px;overflow:hidden">';
-  // Red zone: 0 to VT min
-  html+='<div style="position:absolute;left:0;top:0;width:'+vtMinPct+'%;height:100%;background:rgba(220,38,38,0.15)"></div>';
-  // Fill bar up to projected
-  html+='<div style="position:absolute;left:0;top:0;width:'+vtProjPct+'%;height:100%;background:'+fillColor+';border-radius:6px 0 0 6px;opacity:0.85"></div>';
-  // VT min line
-  html+='<div style="position:absolute;left:'+vtMinPct+'%;top:0;width:2px;height:100%;background:#dc2626;opacity:0.6"></div>';
-  html+='</div>';
-
-  // Labels below bar
-  html+='<div style="position:relative;height:18px">';
-  html+='<div style="position:absolute;left:0;font-size:9px;color:#9ca3af">0</div>';
-  if(vtMinPct>8&&vtMinPct<90){
-    html+='<div style="position:absolute;left:'+vtMinPct+'%;transform:translateX(-50%);font-size:9px;color:#dc2626;font-weight:700">min '+vtMin+'</div>';
+    html+='<div style="background:'+adjBg+';border:1.5px solid '+adjBorder+';border-left:5px solid '+adjLeftBorder+';border-radius:10px;padding:16px 18px;margin-bottom:14px">';
+    html+='<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:'+adjColor+';opacity:0.65;margin-bottom:6px">Given This Season\'s Weather</div>';
+    html+='<div style="font-size:24px;font-weight:800;color:'+adjColor+';line-height:1.1;margin-bottom:4px">'+adjHero+'</div>';
+    html+='<div style="font-size:13px;color:'+adjColor+';opacity:0.8;margin-bottom:6px">'+adjSub+'</div>';
+    html+='<div style="font-size:13px;font-weight:700;color:'+adjColor+'">'+adjRec+'</div>';
+    html+='<div style="margin-top:10px;padding-top:8px;border-top:1px solid '+adjBorder+';font-size:11px;color:'+adjColor+';opacity:0.6;display:flex;gap:18px;flex-wrap:wrap">';
+    html+='<span>Plan assumed: '+Math.round(planLossPct)+'% loss</span>';
+    html+='<span>Actual this season: '+Math.round(actualLossPct)+'% loss</span>';
+    html+='</div>';
+    html+='</div>';
+  } else {
+    html+='<div style="padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e5e7eb;font-size:12px;color:#9ca3af;font-style:italic;margin-bottom:14px">Loading weather data to compute season adjustment&hellip;</div>';
   }
-  html+='<div style="position:absolute;right:0;font-size:9px;color:#9ca3af">'+Math.round(barMax)+'</div>';
+
+  // ── N snapshot stats ─────────────────────────────────────────────────────
+  var eosColor=eosRemaining>=0?'#16a34a':'#dc2626';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">';
+  // Now
+  html+='<div style="background:#f8fafc;border-radius:8px;padding:10px 12px">';
+  html+='<div style="font-size:10px;font-weight:600;color:#9ca3af;margin-bottom:2px">Now &mdash; '+STAGES[ci].l+'</div>';
+  html+='<div style="font-size:22px;font-weight:800;color:#1a56a0;line-height:1">'+curRemaining+'</div>';
+  html+='<div style="font-size:10px;color:#9ca3af">lb N remaining</div>';
+  html+='</div>';
+  // Projected end of season
+  html+='<div style="background:#f8fafc;border-radius:8px;padding:10px 12px">';
+  html+='<div style="font-size:10px;font-weight:600;color:#9ca3af;margin-bottom:2px">Season-end Projected</div>';
+  html+='<div style="font-size:22px;font-weight:800;color:'+eosColor+';line-height:1">'+(eosRemaining>=0?'+':'')+eosRemaining+'</div>';
+  html+='<div style="font-size:10px;color:#9ca3af">'+(eosRemaining>=0?'surplus lb/ac':'deficit lb/ac')+'</div>';
   html+='</div>';
   html+='</div>';
 
-  // Worst-case row if bands available
+  // ── Worst-case weather check ─────────────────────────────────────────────
+  var vtMin=Math.round(d.vtTarget||0);
+  var vtWorst=d.bands?Math.round(d.bands.p10[6]||0):null;
   if(vtWorst!==null){
     var worstColor=vtWorst>=vtMin?'#16a34a':'#dc2626';
-    html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f8fafc;border-radius:8px;border:1px solid #e5e7eb">';
-    html+='<div style="font-size:18px">⚠</div>';
+    html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f8fafc;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:14px">';
+    html+='<div style="font-size:15px">&#9888;</div>';
     html+='<div>';
-    html+='<div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em">Worst-case year (50yr history)</div>';
-    html+='<div style="font-size:13px;font-weight:700;color:'+worstColor+'">'+vtWorst+' lb/ac at VT — '+(vtWorst>=vtMin?'still above minimum':'below minimum')+'</div>';
+    html+='<div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em">Worst-case season (50yr history) at tassel</div>';
+    html+='<div style="font-size:13px;font-weight:700;color:'+worstColor+'">'+vtWorst+' lb/ac &mdash; '+(vtWorst>=vtMin?'still above minimum':'below minimum')+'</div>';
     html+='</div></div>';
-  } else {
-    html+='<div style="font-size:11px;color:#9ca3af;font-style:italic">Loading 50-year weather range…</div>';
+  } else if(!_weatherLossPct){
+    html+='<div style="font-size:11px;color:#9ca3af;font-style:italic;margin-bottom:14px">Loading 50-year weather range&hellip;</div>';
   }
 
-  // Application timeline — shows each app with date if entered
+  // ── Application schedule ─────────────────────────────────────────────────
   var markers=d.appMarkers||[];
-  var datedMarkers=markers.filter(function(m){return m.date;});
-  if(datedMarkers.length){
+  if(markers.length){
     var todayStr=new Date().toISOString().split('T')[0];
-    html+='<div style="margin-top:14px">';
+    html+='<div>';
     html+='<div style="font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">Application Schedule</div>';
     html+='<div style="display:flex;flex-direction:column;gap:6px">';
     markers.forEach(function(m,mi){
-      if(!m.date&&!m.raw)return;
+      if(!m.raw)return;
       var past=m.date?m.date<=todayStr:null;
-      var dot=past===true?'#16a34a':past===false?'#9ca3af':'#d1d5db';
       var textCol=past===true?'#374151':'#9ca3af';
       var dateStr=m.date?(function(){var p=m.date.split('-');return (parseInt(p[1]))+'/'+parseInt(p[2]);})():'No date';
       var noDateStyle=!m.date?';font-style:italic':'';
       html+='<div style="display:flex;align-items:center;gap:10px">';
       html+='<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:'+(past===true?'#2d6a2d':'#f3f4f6')+';border:2px solid '+(past===true?'#2d6a2d':'#d1d5db')+';flex-shrink:0">';
       html+='<span style="font-size:10px;font-weight:700;color:'+(past===true?'#fff':'#9ca3af')+'">'+(mi+1)+'</span></div>';
-      html+='<div style="flex:1">';
-      html+='<span style="font-size:13px;font-weight:600;color:'+textCol+noDateStyle+'">'+m.label+'</span>';
-      html+='<span style="font-size:12px;color:#9ca3af;margin-left:6px">+'+m.raw+' lb/ac</span>';
-      html+='</div>';
+      html+='<div style="flex:1"><span style="font-size:13px;font-weight:600;color:'+textCol+noDateStyle+'">'+m.label+'</span>';
+      html+='<span style="font-size:12px;color:#9ca3af;margin-left:6px">+'+m.raw+' lb/ac</span></div>';
       html+='<div style="font-size:12px;font-weight:600;color:'+(past===true?'#16a34a':past===false?'#6b7280':'#d1d5db')+noDateStyle+'">'+dateStr+'</div>';
-      html+='</div>';
-    });
-    html+='</div></div>';
-  } else if(markers.length){
-    html+='<div style="margin-top:14px">';
-    html+='<div style="font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">Application Schedule</div>';
-    html+='<div style="display:flex;flex-direction:column;gap:6px">';
-    markers.forEach(function(m,mi){
-      html+='<div style="display:flex;align-items:center;gap:10px">';
-      html+='<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#2d6a2d;flex-shrink:0">';
-      html+='<span style="font-size:10px;font-weight:700;color:#fff">'+(mi+1)+'</span></div>';
-      html+='<span style="font-size:13px;font-weight:600;color:#374151">'+m.label+'</span>';
-      html+='<span style="font-size:12px;color:#9ca3af">+'+m.raw+' lb/ac</span>';
-      html+='<span style="font-size:11px;color:#d1d5db;font-style:italic;margin-left:auto">add date →</span>';
       html+='</div>';
     });
     html+='</div></div>';
   }
 
   el.innerHTML=html;
-
-  // Also update vt-rec
-  var recEl=gv('vt-rec');
-  if(recEl){
-    var futureApps=d.appMarkers?d.appMarkers.filter(function(m){return m.idx>ci&&m.idx<=6;}):[];
-    if(vtSurplus<0){
-      var deficit=Math.abs(vtSurplus);
-      var body='';
-      if(futureApps.length>0){
-        var addPerPass=Math.ceil(deficit/futureApps.length);
-        body='You\'re projected <strong>'+deficit+' lb/ac short</strong> at VT. With <strong>'+futureApps.length+' pass'+(futureApps.length>1?'es':'')+' remaining</strong>, add ~<strong>'+addPerPass+' lb N/ac</strong> each.';
-      } else {
-        body='Projected <strong>'+deficit+' lb/ac short</strong> at VT with no passes remaining. Emergency application of <strong>'+deficit+' lb N/ac</strong> before VT is critical.';
-      }
-      recEl.style.display='block';
-      recEl.style.cssText='display:block;margin-top:12px;padding:14px 16px;border-radius:10px;border:1px solid #fecaca;border-left:5px solid #dc2626;font-size:13px;line-height:1.5;background:#fff5f5;color:#7f1d1d';
-      recEl.innerHTML='<strong>⚠ Action needed</strong><br>'+body;
-    } else if(vtSurplus<25){
-      recEl.style.display='block';
-      recEl.style.cssText='display:block;margin-top:12px;padding:14px 16px;border-radius:10px;border:1px solid #fde68a;border-left:5px solid #f59e0b;font-size:13px;line-height:1.5;background:#fffbeb;color:#78350f';
-      recEl.innerHTML='<strong>On track but tight</strong> — projected <strong>+'+vtSurplus+' lb/ac</strong> above minimum at VT.';
-    } else {
-      recEl.style.display='block';
-      recEl.style.cssText='display:block;margin-top:12px;padding:14px 16px;border-radius:10px;border:1px solid #bbf7d0;border-left:5px solid #16a34a;font-size:13px;line-height:1.5;background:#f0fdf4;color:#14532d';
-      recEl.innerHTML='<strong>✓ On track</strong> — projected <strong>+'+vtSurplus+' lb/ac</strong> above the VT minimum.';
-    }
-  }
 }
 
 var _STAGE_DAYS_SIM = [7, 21, 35, 49, 63, 75, 83, 93, 103, 113, 125];
@@ -963,7 +923,7 @@ async function fetchWeatherBands(){
 
 function _renderHistTable(){
   var d=_chart; if(!d||!d.yearRows)return;
-  var rows=d.yearRows, curIdx=d.curIdx, userVal=d.remVals[curIdx], vtIdx=6;
+  var rows=d.yearRows, curIdx=d.curIdx, userVal=d.stagedRemVals[curIdx], vtIdx=6;
   // Sort by N remaining at current stage descending (best year first)
   var sorted=rows.slice().sort(function(a,b){return b.sim[curIdx]-a.sim[curIdx];});
   var html='';
