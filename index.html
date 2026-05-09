@@ -470,8 +470,9 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
   if(f3R>0)appPool[5]=f3R*lm;
   var stagPool=0;
   var stagedRemVals=STAGES.map(function(s,i){if(appPool[i])stagPool+=appPool[i];return stagPool-demand*s.pct/100;});
-  // Markers for blip arrows (exclude pre-plant since it's the starting point)
+  // Markers — pre-plant anchors the start so the line's opening value makes sense
   var appMarkers=[];
+  if(ppR>0)appMarkers.push({idx:0,raw:ppR,label:'Pre-plant'});
   if(sdR>0)appMarkers.push({idx:2,raw:sdR,label:'Sidedress'});
   if(f1R>0)appMarkers.push({idx:3,raw:f1R,label:'Fert 1'});
   if(f2R>0)appMarkers.push({idx:4,raw:f2R,label:'Fert 2'});
