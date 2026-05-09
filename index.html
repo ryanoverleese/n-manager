@@ -562,22 +562,24 @@ function _renderGauge(d){
     // extraLostVsPlan > 0: more was lost than assumed → add to remaining passes
     // extraLostVsPlan < 0: less was lost → can trim remaining passes
 
+    var isShort=d.surplus<10; // short or tight
     var adjBg,adjBorder,adjLeftBorder,adjColor,adjHero,adjSub,adjRec;
     if(Math.abs(extraLostVsPlan)<=8){
       adjBg='#f0fdf4'; adjBorder='#bbf7d0'; adjLeftBorder='#16a34a'; adjColor='#14532d';
-      adjHero='On Plan';
-      adjSub='N losses as expected — no adjustment needed.';
+      adjHero='Weather losses on plan';
+      adjSub=isShort?'Your N shortfall is from your application plan, not weather losses.':'Losses matched expectations — you\'re in good shape.';
       adjRec='';
     } else if(extraLostVsPlan>0){
       adjBg='#fff5f5'; adjBorder='#fecaca'; adjLeftBorder='#dc2626'; adjColor='#7f1d1d';
-      adjHero='+'+extraLostVsPlan+' lb more lost than planned';
+      adjHero='Losses running '+extraLostVsPlan+' lb above plan';
       adjSub='More N lost to weather than expected.';
-      adjRec='Consider adding ~'+extraLostVsPlan+' lb to remaining passes.';
+      adjRec=isShort?'This has contributed to your shortfall — apply to close the gap.':'Keep remaining applications on schedule to compensate.';
     } else {
+      var absExtra=Math.abs(extraLostVsPlan);
       adjBg='#f0fdf4'; adjBorder='#bbf7d0'; adjLeftBorder='#16a34a'; adjColor='#14532d';
-      adjHero=Math.abs(extraLostVsPlan)+' lb less lost than planned';
-      adjSub='Less N lost to weather than expected — good season so far.';
-      adjRec='Consider trimming ~'+Math.abs(extraLostVsPlan)+' lb from remaining passes.';
+      adjHero='Losses running '+absExtra+' lb below plan';
+      adjSub='Weather has been easier on N than expected.';
+      adjRec=isShort?'Despite favorable weather, you\'re still short — apply '+Math.round(Math.abs(d.surplus)+10)+' lb to catch up.':'Good position — you may be able to trim ~'+absExtra+' lb from remaining passes.';
     }
 
     html+='<div style="background:'+adjBg+';border:1.5px solid '+adjBorder+';border-left:5px solid '+adjLeftBorder+';border-radius:10px;padding:16px 18px;margin-bottom:14px">';
