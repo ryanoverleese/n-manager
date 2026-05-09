@@ -639,6 +639,22 @@ function _render(prog, hover){
 
   var vtEnd=Math.min(vtIdx,n-1);
 
+  // Future dashed line — only to VT, segmented with sharp jumps at applications
+  if(curIdx<vtEnd){
+    _getSegs(curIdx,vtEnd).forEach(function(seg){
+      if(seg.pts.length<2)return;
+      ctx.beginPath(); _spline(ctx,seg.pts,0,seg.pts.length-1);
+      ctx.strokeStyle=lca+'0.6)'; ctx.lineWidth=3; ctx.setLineDash([8,5]);
+      ctx.shadowColor=lca+'0.3)'; ctx.shadowBlur=6;
+      ctx.stroke(); ctx.setLineDash([]); ctx.shadowBlur=0;
+      if(seg.jx!==null){
+        ctx.beginPath(); ctx.moveTo(seg.jx,seg.jFrom); ctx.lineTo(seg.jx,seg.jTo);
+        ctx.strokeStyle=lca+'0.6)'; ctx.lineWidth=3; ctx.setLineDash([8,5]);
+        ctx.stroke(); ctx.setLineDash([]);
+      }
+    });
+  }
+
   // Past solid line — segmented with sharp jumps at applications
   if(curIdx>0){
     _getSegs(0,curIdx).forEach(function(seg){
