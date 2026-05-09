@@ -529,7 +529,6 @@ function _renderGauge(d){
   var el=gv('gauge-view'); if(!el)return;
   var sv=d.stagedRemVals, ci=d.curIdx, demand=d.demand;
   var curRemaining=Math.round(sv[ci]||0);
-  var eosRemaining=Math.round(sv[STAGES.length-1]||0); // end-of-season projected surplus/deficit
   var html='';
 
   // VT / tassel date prediction banner
@@ -579,7 +578,7 @@ function _renderGauge(d){
       adjBg='#f0fdf4'; adjBorder='#bbf7d0'; adjLeftBorder='#16a34a'; adjColor='#14532d';
       adjHero='Easy season — ~'+absExtra+' lb more N retained than expected';
       adjSub='Less leaching than your plan assumed.';
-      adjRec=isShort?'Even so, you\'re still short — apply '+Math.round(Math.abs(d.surplus)+10)+' lb to catch up.':'You may be able to trim ~'+absExtra+' lb from remaining passes.';
+      adjRec=isShort?'Even so, you\'re still short. See recommended rate above.':'You may be able to trim ~'+absExtra+' lb from remaining passes.';
     }
 
     html+='<div style="background:'+adjBg+';border:1.5px solid '+adjBorder+';border-left:5px solid '+adjLeftBorder+';border-radius:10px;padding:16px 18px;margin-bottom:14px">';
@@ -596,22 +595,14 @@ function _renderGauge(d){
     html+='<div style="padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e5e7eb;font-size:12px;color:#9ca3af;font-style:italic;margin-bottom:14px">Loading weather data to compute season adjustment&hellip;</div>';
   }
 
-  // ── N snapshot stats ─────────────────────────────────────────────────────
-  var eosColor=eosRemaining>=0?'#16a34a':'#dc2626';
-  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">';
-  // Now
-  html+='<div style="background:#f8fafc;border-radius:8px;padding:10px 12px">';
-  html+='<div style="font-size:10px;font-weight:600;color:#9ca3af;margin-bottom:2px">Now &mdash; '+STAGES[ci].l+'</div>';
-  html+='<div style="font-size:22px;font-weight:800;color:#1a56a0;line-height:1">'+curRemaining+'</div>';
-  html+='<div style="font-size:10px;color:#9ca3af">lb remaining</div>';
-  html+='</div>';
-  // Projected end of season
-  html+='<div style="background:#f8fafc;border-radius:8px;padding:10px 12px">';
-  html+='<div style="font-size:10px;font-weight:600;color:#9ca3af;margin-bottom:2px">Season-end Projected</div>';
-  html+='<div style="font-size:22px;font-weight:800;color:'+eosColor+';line-height:1">'+(eosRemaining>=0?'+':'')+eosRemaining+'</div>';
-  html+='<div style="font-size:10px;color:#9ca3af">'+(eosRemaining>=0?'surplus lb/ac':'deficit lb/ac')+'</div>';
-  html+='</div>';
-  html+='</div>';
+  // ── Current stage N summary ───────────────────────────────────────────────
+  var surpColor=curRemaining>=0?'#16a34a':'#dc2626';
+  html+='<div style="background:#f8fafc;border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px">';
+  html+='<div>';
+  html+='<div style="font-size:10px;font-weight:600;color:#9ca3af;margin-bottom:2px">N balance at '+STAGES[ci].l+'</div>';
+  html+='<div style="font-size:22px;font-weight:800;color:'+surpColor+';line-height:1">'+(curRemaining>=0?'+':'')+curRemaining+' lb/ac</div>';
+  html+='<div style="font-size:10px;color:#9ca3af">available above crop demand so far</div>';
+  html+='</div></div>';
 
   // ── Worst-case weather check ─────────────────────────────────────────────
   var vtMin=Math.round(d.vtTarget||0);
