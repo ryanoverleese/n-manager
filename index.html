@@ -69,7 +69,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
 
 <header>
   <h1>Acre Insights — N Manager</h1>
-  <p>Irrigated corn mid-season nitrogen sufficiency tool</p>
+  <p>In-season N management for irrigated corn</p>
 </header>
 
 <div class="wrap">
@@ -82,12 +82,12 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
     <div><label>State</label><input type="text" id="state" value="Nebraska" placeholder="e.g. Nebraska"></div>
     <div><label>Yield Goal (bu/acre)</label><input type="number" id="yieldGoal" value="230" min="100" max="400"></div>
     <div style="grid-column:1/-1;margin-top:4px">
-      <label>Field Location <span style="font-weight:400;color:#9ca3af">— tap your field to auto-fill soil data</span></label>
+      <label>Field Location <span style="font-weight:400;color:#9ca3af">— tap map to auto-fill soil</span></label>
       <div id="field-map" style="height:220px;border-radius:8px;border:1.5px solid #d1d5db;margin-top:6px;overflow:hidden;background:#e5e7eb"></div>
       <div id="soil-chip" style="display:none;margin-top:8px;padding:10px 12px;border-radius:8px;border:1px solid #bbf7d0;background:#f0fdf4;font-size:12px;color:#166534;line-height:1.5"></div>
     </div>
     <div style="grid-column:1/-1">
-      <label>Lbs of N per bushel of yield goal</label>
+      <label>N factor <span style="font-weight:400;color:#9ca3af">(lb N / bu)</span></label>
       <input type="hidden" id="nFactor" value="1.1">
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px" id="nFactor-pills">
         <button type="button" onclick="setNFactor(0.6)" class="nf-pill">0.6</button>
@@ -99,8 +99,8 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
         <button type="button" onclick="setNFactor(1.2)" class="nf-pill">1.2</button>
       </div>
     </div>
-    <div><label>Soil OM (%)</label><input type="number" id="om" value="2.8" min="0.5" max="8" step="0.1"><div class="hint">OM × 20 = lb N/acre credit</div></div>
-    <div><label>Soil Residual NO₃-N (lb/acre)</label><input type="number" id="soilResidual" value="0" min="0" max="300"><div class="hint">From 0–24" pre-plant soil test. 0 if not tested.</div></div>
+    <div><label>Soil OM (%)</label><input type="number" id="om" value="2.8" min="0.5" max="8" step="0.1"><div class="hint">OM × 20 = lb N/ac credit</div></div>
+    <div><label>Soil Residual NO₃-N (lb/ac)</label><input type="number" id="soilResidual" value="0" min="0" max="300"><div class="hint">0–24" pre-plant test. Leave 0 if untested.</div></div>
     <div>
       <label>Soil Texture</label>
       <select id="soilTexture" onchange="updateTextureUI();calculate()">
@@ -115,7 +115,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
   <label>Previous Crop</label>
   <select id="prevCrop">
     <option value="corn">Corn</option>
-    <option value="soy">Soybean (+25 lb N/acre credit)</option>
+    <option value="soy">Soybean (+25 lb credit)</option>
     <option value="other">Other</option>
   </select>
   <label>Planting Date</label>
@@ -210,12 +210,12 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
       <div><label>Rate (lb N/acre)</label><input type="number" id="pvt-rate" value="0" min="0" max="60"></div>
     </div>
     <div style="margin-top:8px"><label>Application Date</label><input type="date" id="pvt-date" style="width:100%;box-sizing:border-box"></div>
-    <div style="margin-top:6px;font-size:11px;color:#92400e">Via pivot fertigation — highly efficient delivery. Supports grain protein and late-season fill when N is limiting.</div>
+    <div style="margin-top:6px;font-size:11px;color:#92400e">Via pivot — supports grain fill and late-season protein.</div>
   </div>
 </div>
 
 
-<button class="calc-btn" onclick="calculate()">Calculate N Status</button>
+<button class="calc-btn" onclick="calculate()">Calculate</button>
 
 <div id="results">
   <div id="banner" class="banner sufficient">
@@ -235,18 +235,17 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
 <div style="margin:6px 16px 0">
   <button onclick="var d=gv('how-calc');d.style.display=d.style.display==='none'?'block':'none';this.textContent=d.style.display==='none'?'▸ How is this calculated?':'▾ How is this calculated?'" style="background:none;border:none;color:#6b7280;font-size:11px;cursor:pointer;padding:2px 0">▸ How is this calculated?</button>
   <div id="how-calc" style="display:none;margin-top:8px;padding:10px 12px;background:#f8fafc;border-radius:8px;border:1px solid #e5e7eb;font-size:12px;color:#374151;line-height:1.6">
-    <strong>Applied N</strong> — exactly what you entered for each application.<br><br>
-    <strong>Mineralization</strong> — OM% × 20 lb/ac, a static seasonal estimate of N released from soil organic matter decomposition. (Hergert, UNL EC117)<br><br>
-    <strong>Previous crop credit</strong> — 25 lb/ac for soybean, reflecting residual N from nodule breakdown. (UNL EC117, NRCS)<br><br>
-    <strong>Leaching &amp; Denitrification</strong> — Model-driven from actual season precipitation (Open-Meteo). Leaching triggers when single events exceed the soil texture threshold (0.75"–2.5"). Denitrification activates after 3+ saturated days.<br><br>
-    <strong>14-day forecast</strong> — Upcoming rain bends the prediction using the same leaching model.<br><br>
-    <strong>VT minimum</strong> — 43% of total seasonal N demand must be available at VT/R1 to complete grain fill. (Ciampitti &amp; Vyn 2013)<br><br>
-    <strong>10/25/50-year range</strong> — Open-Meteo historical daily precip, 1973–present, run through the leaching/denitrification model using your soil texture.
+    <strong>Applied N</strong> — your entered rates for each application.<br><br>
+    <strong>Mineralization</strong> — OM% × 20 lb/ac seasonal estimate. (UNL EC117)<br><br>
+    <strong>Previous crop credit</strong> — 25 lb/ac for soybean. (UNL EC117)<br><br>
+    <strong>Losses</strong> — computed from actual season precip (Open-Meteo). Leaching triggers above the soil texture threshold (0.75"–2.5"); denitrification after 3+ saturated days.<br><br>
+    <strong>14-day forecast</strong> — bends the projection using the same loss model.<br><br>
+    <strong>50-year history</strong> — daily precip 1973–present, simulated through the loss model for your soil texture.
   </div>
 </div>
 
   <div class="section" id="hist-section" style="display:none">
-    <h2>50-Year Historical Detail <button id="hist-toggle" onclick="toggleHist()" style="font-size:11px;font-weight:600;padding:3px 10px;border:1.5px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;margin-left:8px;text-transform:none;letter-spacing:0">Show</button></h2>
+    <h2>50-Year History <button id="hist-toggle" onclick="toggleHist()" style="font-size:11px;font-weight:600;padding:3px 10px;border:1.5px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;margin-left:8px;text-transform:none;letter-spacing:0">Show</button></h2>
     <div id="hist-table-wrap" style="display:none;overflow-x:auto;margin-top:8px">
       <table id="hist-table" style="font-size:12px">
         <thead><tr>
@@ -262,7 +261,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
   </div>
 
   <div class="section">
-    <h2>N Budget Breakdown</h2>
+    <h2>N Budget</h2>
     <table>
       <thead><tr><th>Item</th><th style="text-align:right">lb N/ac</th></tr></thead>
       <tbody id="tbody"></tbody>
@@ -273,7 +272,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
   <div class="section" style="font-size:13px">
     <h2>Science Basis</h2>
     <p style="margin-bottom:8px">UNL Extension EC117 &nbsp;·&nbsp; ISU MRTN (Sawyer et al.) &nbsp;·&nbsp; Bender et al. 2013 (Agronomy Journal) &nbsp;·&nbsp; Ciampitti &amp; Vyn 2013 (Crop Science) &nbsp;·&nbsp; KSU MF-1005 &nbsp;·&nbsp; USDA-NRCS</p>
-    <p style="color:#6b7280">Estimates only. Consult a CCA for site-specific recommendations.</p>
+    <p style="color:#6b7280">Estimates only — consult a CCA for site-specific advice.</p>
   </div>
 </div>
 
@@ -346,11 +345,11 @@ function calculate() {
   var surplus = remaining - stillNeeded;
 
   var cls, lbl, rec, fertRec = '';
-  if (surplus >= 30)       { cls='sufficient';  lbl='N Sufficient';         rec='N looks sufficient. No fertigation needed.'; }
-  else if (surplus >= 10)  { cls='marginal';    lbl='Marginal';             rec='N is marginal. Consider a light fertigation if corn is above $4.50/bu.'; fertRec='Suggested: 15-20 lb N/acre via UAN or AMS'; }
-  else if (surplus >= 0)   { cls='borderline';  lbl='Borderline Deficient'; rec='N is borderline deficient. Fertigation recommended.'; fertRec='Suggested: 20-30 lb N/acre via UAN or AMS'; }
-  else { cls='deficit'; lbl='N Deficient'; rec='Crop is N deficient. Fertigation strongly recommended.';
-    fertRec = 'Suggested: ' + Math.round(Math.abs(surplus)+15) + ' lb N/acre via UAN or AMS — apply ASAP'; }
+  if (surplus >= 30)       { cls='sufficient';  lbl='N Sufficient';         rec='No additional N needed.'; }
+  else if (surplus >= 10)  { cls='marginal';    lbl='Marginal';             rec='Consider a light fertigation pass.'; fertRec='Suggested: 15–20 lb/ac'; }
+  else if (surplus >= 0)   { cls='borderline';  lbl='Tight';                rec='Fertigation recommended.'; fertRec='Suggested: 20–30 lb/ac'; }
+  else { cls='deficit'; lbl='N Short'; rec='Apply N now.';
+    fertRec = 'Apply ' + Math.round(Math.abs(surplus)+15) + ' lb/ac ASAP'; }
 
   var banner = gv('banner');
   banner.className = 'banner ' + cls;
@@ -361,20 +360,20 @@ function calculate() {
   gv('fert-rec').style.display = fertRec ? '' : 'none';
 
   var rows = [];
-  rows.push({l:'Total Crop N Demand', v:demand.toFixed(0), c:''});
-  if (prevCrop==='soy') rows.push({l:'Previous Crop Credit (Soy)', v:'+25', c:'cr'});
-  rows.push({l:'OM Mineralization', v:'+'+omCredit.toFixed(0), c:'cr'});
-  if (soilResidual>0) rows.push({l:'Soil Residual NO₃-N', v:'+'+soilResidual.toFixed(0), c:'cr'});
+  rows.push({l:'Total N Demand', v:demand.toFixed(0), c:''});
+  if (prevCrop==='soy') rows.push({l:'Prev. Crop Credit', v:'+25', c:'cr'});
+  rows.push({l:'Mineralization', v:'+'+omCredit.toFixed(0), c:'cr'});
+  if (soilResidual>0) rows.push({l:'Soil Residual', v:'+'+soilResidual.toFixed(0), c:'cr'});
   if (ppRate>0) rows.push({l:'Pre-plant', v:'+'+ppRate.toFixed(0), c:'cr'});
   if (sdRate>0) rows.push({l:'Sidedress', v:'+'+sdRate.toFixed(0), c:'cr'});
   if (f1>0) rows.push({l:'Fertigation 1', v:'+'+f1.toFixed(0), c:'cr'});
   if (f2>0) rows.push({l:'Fertigation 2', v:'+'+f2.toFixed(0), c:'cr'});
   if (f3>0) rows.push({l:'Fertigation 3', v:'+'+f3.toFixed(0), c:'cr'});
-  if (losses>0) rows.push({l:'N Losses', v:'-'+losses.toFixed(0), c:'db'});
-  rows.push({l:'Total N Available', v:totalAvail.toFixed(0), c:'', tot:true});
-  rows.push({l:'N Used by Crop', v:'-'+uptakeToDate.toFixed(0), c:'db'});
-  rows.push({l:'N Remaining', v:remaining.toFixed(0), c:''});
-  rows.push({l:'N Still Needed', v:'-'+stillNeeded.toFixed(0), c:'db'});
+  if (losses>0) rows.push({l:'Weather Losses', v:'-'+losses.toFixed(0), c:'db'});
+  rows.push({l:'Total Available', v:totalAvail.toFixed(0), c:'', tot:true});
+  rows.push({l:'Used by Crop', v:'-'+uptakeToDate.toFixed(0), c:'db'});
+  rows.push({l:'Remaining', v:remaining.toFixed(0), c:''});
+  rows.push({l:'Still Needed', v:'-'+stillNeeded.toFixed(0), c:'db'});
   rows.push({l:'Surplus / (Deficit)', v:(surplus>=0?'+':'')+surplus.toFixed(0), c:surplus>=0?'cr':'db', tot:true});
 
   var html = '';
@@ -567,18 +566,18 @@ function _renderGauge(d){
     if(Math.abs(extraLostVsPlan)<=8){
       adjBg='#f0fdf4'; adjBorder='#bbf7d0'; adjLeftBorder='#16a34a'; adjColor='#14532d';
       adjHero='On Plan';
-      adjSub='N losses match your plan\'s weather assumption.';
-      adjRec='No adjustment to remaining applications needed.';
+      adjSub='N losses as expected — no adjustment needed.';
+      adjRec='';
     } else if(extraLostVsPlan>0){
       adjBg='#fff5f5'; adjBorder='#fecaca'; adjLeftBorder='#dc2626'; adjColor='#7f1d1d';
       adjHero='+'+extraLostVsPlan+' lb more lost than planned';
-      adjSub='This season\'s weather lost more N than your plan assumed.';
-      adjRec='Consider adding ~'+extraLostVsPlan+' lb across remaining passes to stay on track.';
+      adjSub='More N lost to weather than expected.';
+      adjRec='Consider adding ~'+extraLostVsPlan+' lb to remaining passes.';
     } else {
       adjBg='#f0fdf4'; adjBorder='#bbf7d0'; adjLeftBorder='#16a34a'; adjColor='#14532d';
       adjHero=Math.abs(extraLostVsPlan)+' lb less lost than planned';
-      adjSub='Fewer losses than your plan assumed — conditions have been favorable.';
-      adjRec='You can trim ~'+Math.abs(extraLostVsPlan)+' lb from remaining applications.';
+      adjSub='Less N lost to weather than expected — good season so far.';
+      adjRec='Consider trimming ~'+Math.abs(extraLostVsPlan)+' lb from remaining passes.';
     }
 
     html+='<div style="background:'+adjBg+';border:1.5px solid '+adjBorder+';border-left:5px solid '+adjLeftBorder+';border-radius:10px;padding:16px 18px;margin-bottom:14px">';
@@ -602,7 +601,7 @@ function _renderGauge(d){
   html+='<div style="background:#f8fafc;border-radius:8px;padding:10px 12px">';
   html+='<div style="font-size:10px;font-weight:600;color:#9ca3af;margin-bottom:2px">Now &mdash; '+STAGES[ci].l+'</div>';
   html+='<div style="font-size:22px;font-weight:800;color:#1a56a0;line-height:1">'+curRemaining+'</div>';
-  html+='<div style="font-size:10px;color:#9ca3af">lb N remaining</div>';
+  html+='<div style="font-size:10px;color:#9ca3af">lb remaining</div>';
   html+='</div>';
   // Projected end of season
   html+='<div style="background:#f8fafc;border-radius:8px;padding:10px 12px">';
@@ -620,8 +619,8 @@ function _renderGauge(d){
     html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f8fafc;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:14px">';
     html+='<div style="font-size:15px">&#9888;</div>';
     html+='<div>';
-    html+='<div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em">Worst-case season (50yr history) at tassel</div>';
-    html+='<div style="font-size:13px;font-weight:700;color:'+worstColor+'">'+vtWorst+' lb/ac &mdash; '+(vtWorst>=vtMin?'still above minimum':'below minimum')+'</div>';
+    html+='<div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em">Worst-case year at tassel (50yr)</div>';
+    html+='<div style="font-size:13px;font-weight:700;color:'+worstColor+'">'+vtWorst+' lb/ac &mdash; '+(vtWorst>=vtMin?'above minimum':'below minimum')+'</div>';
     html+='</div></div>';
   } else if(!_weatherLossPct){
     html+='<div style="font-size:11px;color:#9ca3af;font-style:italic;margin-bottom:14px">Loading 50-year weather range&hellip;</div>';
@@ -815,7 +814,7 @@ async function fetchWeatherBands(){
               +'</tr>';
           }
           lossEl.style.display='block';
-          lossEl.innerHTML='<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:#374151;margin-bottom:10px">N Accounting — This Season</div>'
+          lossEl.innerHTML='<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:#374151;margin-bottom:10px">N This Season</div>'
             +'<table style="width:100%;border-collapse:collapse">'
             +'<tr><td colspan="3" style="font-size:10px;font-weight:700;color:#16a34a;padding:2px 0 4px;text-transform:uppercase;letter-spacing:0.04em">Sources</td></tr>'
             +(s.prePlant?row('Pre-plant applied','+'+s.prePlant+' lb/ac','#16a34a'):'')
@@ -823,15 +822,15 @@ async function fetchWeatherBands(){
             +(s.fert1?row('Fertigation 1','+'+s.fert1+' lb/ac','#16a34a'):'')
             +(s.fert2?row('Fertigation 2','+'+s.fert2+' lb/ac','#16a34a'):'')
             +(s.fert3?row('Fertigation 3','+'+s.fert3+' lb/ac','#16a34a'):'')
-            +row('Mineralization (OM)','+'+s.mineralization+' lb/ac','#16a34a','OM × 20')
-            +(s.prevCrop?row('Previous crop credit','+'+s.prevCrop+' lb/ac','#16a34a','soybean'):'')
-            +(s.soilResidual?row('Soil residual NO₃-N','+'+s.soilResidual+' lb/ac','#16a34a','soil test'):'')
-            +(totalLost>0?'<tr><td colspan="3" style="border-top:1px solid #e5e7eb;padding:6px 0 4px;font-size:10px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.04em">Losses (weather-estimated)</td></tr>':'')
+            +row('Mineralization','+'+s.mineralization+' lb/ac','#16a34a','OM × 20')
+            +(s.prevCrop?row('Prev. crop credit','+'+s.prevCrop+' lb/ac','#16a34a','soybean'):'')
+            +(s.soilResidual?row('Soil residual','+'+s.soilResidual+' lb/ac','#16a34a','soil test'):'')
+            +(totalLost>0?'<tr><td colspan="3" style="border-top:1px solid #e5e7eb;padding:6px 0 4px;font-size:10px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.04em">Weather Losses</td></tr>':'')
             +(ll>0?row('Leaching','−'+ll+' lb/ac','#b45309',cm.leachEvents+' event'+(cm.leachEvents!==1?'s':'')+' &gt;'+tex.leachThresh+'"'):'')
-            +(dl>0?row('Denitrification','−'+dl+' lb/ac','#7c3aed','saturated soil days'):'')
-            +'<tr style="border-top:2px solid #374151"><td style="padding:8px 8px 4px 0;font-size:13px;font-weight:700">Net available</td>'
+            +(dl>0?row('Denitrification','−'+dl+' lb/ac','#7c3aed','sat. soil days'):'')
+            +'<tr style="border-top:2px solid #374151"><td style="padding:8px 8px 4px 0;font-size:13px;font-weight:700">Net N</td>'
             +'<td style="padding:8px 0 4px;font-size:15px;font-weight:800;text-align:right;color:'+(net>0?'#1a56a0':'#dc2626')+'">'+net+' lb/ac</td>'
-            +'<td style="padding:8px 0 4px 8px;font-size:10px;color:#9ca3af">'+cm.totalPrecipIn.toFixed(1)+'" rain so far</td></tr>'
+            +'<td style="padding:8px 0 4px 8px;font-size:10px;color:#9ca3af">'+cm.totalPrecipIn.toFixed(1)+'" rain</td></tr>'
             +'</table>';
         }
       }
