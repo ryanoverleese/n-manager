@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Acre Insights — N Manager</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 body{font-family:-apple-system,sans-serif;background:#f4f6f8;color:#1f2937;font-size:16px;margin:0;padding:0}
 header{background:#2d6a2d;color:#fff;padding:16px 20px}
@@ -79,6 +81,11 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
     <div><label>County</label><input type="text" id="county" value="Kearney" placeholder="e.g. Kearney"></div>
     <div><label>State</label><input type="text" id="state" value="Nebraska" placeholder="e.g. Nebraska"></div>
     <div><label>Yield Goal (bu/acre)</label><input type="number" id="yieldGoal" value="230" min="100" max="400"></div>
+    <div style="grid-column:1/-1;margin-top:4px">
+      <label>Field Location <span style="font-weight:400;color:#9ca3af">— tap your field to auto-fill soil data</span></label>
+      <div id="field-map" style="height:220px;border-radius:8px;border:1.5px solid #d1d5db;margin-top:6px;overflow:hidden;background:#e5e7eb"></div>
+      <div id="soil-chip" style="display:none;margin-top:8px;padding:10px 12px;border-radius:8px;border:1px solid #bbf7d0;background:#f0fdf4;font-size:12px;color:#166534;line-height:1.5"></div>
+    </div>
     <div style="grid-column:1/-1">
       <label>Lbs of N per bushel of yield goal</label>
       <input type="hidden" id="nFactor" value="1.1">
@@ -820,10 +827,15 @@ async function fetchWeatherBands(){
     // Geocode county via Nominatim (OSM) — handles US county names reliably
     var cleanCounty=county.replace(/county/i,'').trim();
     var geoQ=encodeURIComponent(cleanCounty+' County, '+state+', USA');
-    var geoRes=await fetch('https://nominatim.openstreetmap.org/search?q='+geoQ+'&format=json&limit=1');
-    var geoData=await geoRes.json();
-    if(!geoData||!geoData.length)throw new Error('Location not found');
-    var lat=parseFloat(geoData[0].lat), lon=parseFloat(geoData[0].lon);
+    var lat, lon;
+    if(_fieldLatLng){
+      lat=_fieldLatLng.lat; lon=_fieldLatLng.lng;
+    } else {
+      var geoRes=await fetch('https://nominatim.openstreetmap.org/search?q='+geoQ+'&format=json&limit=1');
+      var geoData=await geoRes.json();
+      if(!geoData||!geoData.length)throw new Error('Location not found');
+      lat=parseFloat(geoData[0].lat); lon=parseFloat(geoData[0].lon);
+    }
 
     // Fetch 50 years of daily precip
     var curYear=new Date().getFullYear();
@@ -1048,7 +1060,68 @@ function closeChartFullscreen(){
   if(screen.orientation&&screen.orientation.unlock)screen.orientation.unlock();
 }
 
+// ── Field map + SSURGO soil lookup ──────────────────────────────────────────
+var _fieldLatLng=null;
+
+function initFieldMap(){
+  var map=L.map('field-map',{zoomControl:true,attributionControl:false})
+    .setView([41.5,-99.5],6);
+  L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',{maxZoom:20}).addTo(map);
+  var marker=null;
+  map.on('click',function(e){
+    if(marker)map.removeLayer(marker);
+    marker=L.marker(e.latlng).addTo(map);
+    _fieldLatLng={lat:e.latlng.lat,lng:e.latlng.lng};
+    lookupSoil(e.latlng.lat,e.latlng.lng);
+  });
+}
+
+function hsgToTex(hydgrp){
+  var h=((hydgrp||'').match(/[A-D]/)||['B'])[0];
+  return {A:'sandyLoam',B:'loam',C:'clayLoam',D:'clay'}[h]||'loam';
+}
+
+function lookupSoil(lat,lng){
+  var chip=gv('soil-chip');
+  chip.style.display='block';
+  chip.style.background='#f0f9ff'; chip.style.borderColor='#bae6fd'; chip.style.color='#0369a1';
+  chip.textContent='Looking up soil data…';
+  var sql='SELECT TOP 1 co.compname, co.hydgrp, co.drainagecl, ch.om_r, ch.texture '
+    +'FROM mapunit mu '
+    +'INNER JOIN component co ON mu.mukey=co.mukey '
+    +'INNER JOIN chorizon ch ON co.cokey=ch.cokey '
+    +'WHERE mu.mukey IN (SELECT mukey FROM SDA_Get_Mukey_from_intersection_with_WktWgs84('
+    +"'point("+lng.toFixed(5)+' '+lat.toFixed(5)+")'))"
+    +' AND co.majcompflag=\'Yes\' AND ch.hzdept_r=0 ORDER BY co.comppct_r DESC';
+  fetch('https://SDMDataAccess.sc.egov.usda.gov/Tabular/SDMTabularService/post.rest',{
+    method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'query='+encodeURIComponent(sql)+'&format=JSON'
+  }).then(function(r){return r.json();}).then(function(data){
+    if(!data.Table||!data.Table.length){
+      chip.style.background='#fff5f5'; chip.style.borderColor='#fecaca'; chip.style.color='#dc2626';
+      chip.textContent='No soil data found for this location.'; return;
+    }
+    var row=data.Table[0];
+    var compname=row[0]||'', hydgrp=(row[1]||'').trim(), drainagecl=row[2]||'', omR=parseFloat(row[3])||0, texture=row[4]||'';
+    var texKey=hsgToTex(hydgrp);
+    gv('soilTexture').value=texKey;
+    if(omR>0) gv('om').value=omR.toFixed(1);
+    updateTextureUI();
+    var texLabels={sand:'Sandy/Loamy Sand',sandyLoam:'Sandy Loam',loam:'Loam/Silt Loam',clayLoam:'Clay Loam',clay:'Clay'};
+    chip.style.background='#f0fdf4'; chip.style.borderColor='#bbf7d0'; chip.style.color='#166534';
+    chip.innerHTML='<strong>'+compname+(texture?' '+texture:'')+'</strong>'
+      +(hydgrp?' &nbsp;·&nbsp; HSG '+hydgrp:'')
+      +(drainagecl?' &nbsp;·&nbsp; '+drainagecl:'')
+      +'<br><span style="color:#6b7280">Auto-filled: '+texLabels[texKey]+(omR>0?', OM '+omR.toFixed(1)+'%':'')+'</span>';
+  }).catch(function(){
+    chip.style.background='#fff5f5'; chip.style.borderColor='#fecaca'; chip.style.color='#dc2626';
+    chip.textContent='Could not load soil data — check connection.';
+  });
+}
+
 updateTextureUI();
+setTimeout(initFieldMap,0);
 </script>
 </body>
 </html>
