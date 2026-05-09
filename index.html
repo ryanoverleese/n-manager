@@ -608,20 +608,20 @@ function _render(prog, hover){
     ctx.fillText('VT/R1 min',P.l+cw+3,vtY+3);
   }
 
-  // Historical percentile bands
+  // Historical percentile bands — clipped so they don't bleed outside chart area
   if(d.bands){
+    ctx.save();
+    ctx.beginPath(); ctx.rect(P.l,P.t,cw,ch); ctx.clip();
     var b=d.bands, n2=d.n;
-    // 10th-90th band (lightest)
     ctx.beginPath();
     for(var i=0;i<n2;i++){i===0?ctx.moveTo(xp(i),yp(b.p90[i])):ctx.lineTo(xp(i),yp(b.p90[i]));}
     for(var i=n2-1;i>=0;i--){ctx.lineTo(xp(i),yp(b.p10[i]));}
     ctx.closePath(); ctx.fillStyle='rgba(100,120,160,0.09)'; ctx.fill();
-    // 25th-75th band (medium)
     ctx.beginPath();
     for(var i=0;i<n2;i++){i===0?ctx.moveTo(xp(i),yp(b.p75[i])):ctx.lineTo(xp(i),yp(b.p75[i]));}
     for(var i=n2-1;i>=0;i--){ctx.lineTo(xp(i),yp(b.p25[i]));}
     ctx.closePath(); ctx.fillStyle='rgba(100,120,160,0.14)'; ctx.fill();
-    // median line intentionally omitted
+    ctx.restore();
   }
 
   ctx.save();
@@ -654,9 +654,9 @@ function _render(prog, hover){
 
   var vtEnd=Math.min(vtIdx,n-1);
 
-  // Future dashed line — only to VT, segmented with sharp jumps at applications
-  if(curIdx<vtEnd){
-    _getSegs(curIdx,vtEnd).forEach(function(seg){
+  // Future dashed line — from Now to end of season (full prediction)
+  if(curIdx<n-1){
+    _getSegs(curIdx,n-1).forEach(function(seg){
       if(seg.pts.length<2)return;
       ctx.beginPath(); _spline(ctx,seg.pts,0,seg.pts.length-1);
       ctx.strokeStyle=lca+'0.6)'; ctx.lineWidth=3; ctx.setLineDash([8,5]);
