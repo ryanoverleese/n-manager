@@ -207,63 +207,34 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
     <div class="fert-rec" id="fert-rec"></div>
   </div>
 
-  <div class="section">
-    <h2>Season N Demand Curve <button onclick="openChartFullscreen()" style="float:right;background:none;border:1.5px solid #d1d5db;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:13px;color:#6b7280;line-height:1" title="Fullscreen landscape">⛶</button></h2>
-    <canvas id="curve" height="340"></canvas>
-    <div class="chart-legend">
-      <span class="leg-item"><span class="leg-solid"></span> N Remaining</span>
-      <span class="leg-item" id="leg-forecast" style="display:none"><span style="display:inline-block;width:10px;height:10px;background:rgba(59,130,246,0.5);border-radius:2px"></span> 14-day forecast</span>
-      <span class="leg-item" id="leg-bands" style="display:none">
-        <span style="display:inline-flex;gap:4px;align-items:center">
-          <span style="display:inline-block;width:14px;height:8px;background:rgba(100,120,160,0.28);border-radius:2px"></span>
-          <span style="font-size:10px;color:#9ca3af">50yr</span>
-          <span style="display:inline-block;width:14px;height:8px;background:rgba(80,140,170,0.35);border-radius:2px"></span>
-          <span style="font-size:10px;color:#9ca3af">25yr</span>
-          <span style="display:inline-block;width:14px;height:8px;background:rgba(60,160,140,0.45);border-radius:2px"></span>
-          <span style="font-size:10px;color:#9ca3af">10yr</span>
-        </span>
-      </span>
-    </div>
-    <div id="app-legend" style="display:none;margin-top:8px;display:flex;gap:12px;flex-wrap:wrap"></div>
-    <div id="weather-status" style="display:none;font-size:11px;color:#9ca3af;margin-top:6px"></div>
-    <div id="vt-outlook" style="display:none;margin-top:14px;padding:16px 18px;background:#f0fdf4;border-radius:10px;border:1px solid #bbf7d0;border-left:5px solid #16a34a">
-      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.09em;color:#6b7280;margin-bottom:12px">VT/R1 Outlook — The Only Benchmark That Matters</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1.3fr 1fr;gap:6px;align-items:start">
-        <div>
-          <div style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px">Planned N at VT</div>
-          <div id="vto-planned" style="font-size:22px;font-weight:800;color:#1a56a0;line-height:1">—</div>
-        </div>
-        <div>
-          <div style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px">Min needed</div>
-          <div id="vto-min" style="font-size:22px;font-weight:800;color:#6b7280;line-height:1">—</div>
-        </div>
-        <div>
-          <div style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px">Surplus / Deficit</div>
-          <div id="vto-surplus" style="font-size:28px;font-weight:800;line-height:1">—</div>
-        </div>
-        <div id="vto-stress-wrap" style="display:none">
-          <div style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:3px">Worst-case year</div>
-          <div id="vto-stress" style="font-size:22px;font-weight:800;line-height:1">—</div>
-        </div>
-      </div>
-    </div>
-    <div id="vt-rec" style="display:none;margin-top:12px;padding:14px 16px;border-radius:10px;border:1px solid #bbf7d0;border-left:5px solid #16a34a;font-size:13px;line-height:1.5"></div>
-    <div id="n-loss-breakdown" style="display:none;margin-top:10px;padding:10px 12px;background:#fafafa;border-radius:8px;border:1px solid #e5e7eb"></div>
-    <div style="margin-top:6px">
-      <button onclick="var d=gv('how-calc');d.style.display=d.style.display==='none'?'block':'none';this.textContent=d.style.display==='none'?'▸ How is this calculated?':'▾ How is this calculated?'" style="background:none;border:none;color:#6b7280;font-size:11px;cursor:pointer;padding:2px 0">▸ How is this calculated?</button>
-      <div id="how-calc" style="display:none;margin-top:8px;padding:10px 12px;background:#f8fafc;border-radius:8px;border:1px solid #e5e7eb;font-size:12px;color:#374151;line-height:1.6">
-        <strong>Applied N</strong> — exactly what you entered for each application.<br><br>
-        <strong>Mineralization</strong> — OM% × 20 lb/ac, a static seasonal estimate of N released from soil organic matter decomposition. (Hergert, UNL EC117)<br><br>
-        <strong>Previous crop credit</strong> — 25 lb/ac for soybean, reflecting residual N from nodule breakdown. (UNL EC117, NRCS)<br><br>
-        <strong>Leaching</strong> — When a single rain event exceeds 1.5", nitrogen is pushed below the root zone. Larger events cause proportionally more loss, up to 20% of available N per event.<br><br>
-        <strong>Denitrification</strong> — After 3+ consecutive days of saturated soil, soil bacteria convert NO₃ to gas in the absence of oxygen, losing an estimated 2.5% of available N per day.<br><br>
-        <strong>N uptake curve</strong> — Ciampitti &amp; Vyn (2013): 43% of total N uptake occurs after VT in modern high-yield hybrids. Pre-VT distribution follows the same research.<br><br>
-        <strong>VT minimum</strong> — 43% of total seasonal N demand must be available at VT/R1 to complete grain fill.<br><br>
-        <strong>Soil texture</strong> — affects the full N cycle. (1) Mineralization: sandy soils release ~75% of the OM credit; clay soils release ~115% due to higher microbial activity and water retention. (2) Leaching: sandy soils lose 20% per event vs. 4% for clay — and the weather simulation uses texture-specific thresholds (0.75"–2.5"). (3) Denitrification: clay soils lose up to 28% when saturated vs. 6% for sand, and trigger sooner.<br><br>
-        <strong>50-year weather bands</strong> — Open-Meteo historical daily precipitation for your county, 1973–present, run through the same leaching and denitrification model using your selected soil texture. Bands show 10th, 25th, 50th, 75th, and 90th percentile outcomes across all years.
-      </div>
-    </div>
+<!-- Option B: Season Milestone Timeline -->
+<div class="section" id="viz-timeline">
+  <h2 style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#6b7280;margin-bottom:14px">Option B — Season Milestones</h2>
+  <div id="milestone-view" style="overflow-x:auto;padding-bottom:4px"></div>
+  <div id="app-legend" style="display:none;margin-top:12px;flex-wrap:wrap;gap:10px"></div>
+</div>
+
+<!-- Option C: VT/R1 Gauge -->
+<div class="section" id="viz-gauge">
+  <h2 style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#6b7280;margin-bottom:14px">Option C — VT/R1 Outlook</h2>
+  <div id="gauge-view"></div>
+  <div id="vt-rec" style="display:none;margin-top:12px;padding:14px 16px;border-radius:10px;border:1px solid #bbf7d0;border-left:5px solid #16a34a;font-size:13px;line-height:1.5"></div>
+</div>
+
+<div id="weather-status" style="display:none;font-size:11px;color:#9ca3af;margin:6px 16px 0"></div>
+<div id="n-loss-breakdown" style="display:none;margin:10px 16px;padding:10px 12px;background:#fafafa;border-radius:8px;border:1px solid #e5e7eb"></div>
+<div style="margin:6px 16px 0">
+  <button onclick="var d=gv('how-calc');d.style.display=d.style.display==='none'?'block':'none';this.textContent=d.style.display==='none'?'▸ How is this calculated?':'▾ How is this calculated?'" style="background:none;border:none;color:#6b7280;font-size:11px;cursor:pointer;padding:2px 0">▸ How is this calculated?</button>
+  <div id="how-calc" style="display:none;margin-top:8px;padding:10px 12px;background:#f8fafc;border-radius:8px;border:1px solid #e5e7eb;font-size:12px;color:#374151;line-height:1.6">
+    <strong>Applied N</strong> — exactly what you entered for each application.<br><br>
+    <strong>Mineralization</strong> — OM% × 20 lb/ac, a static seasonal estimate of N released from soil organic matter decomposition. (Hergert, UNL EC117)<br><br>
+    <strong>Previous crop credit</strong> — 25 lb/ac for soybean, reflecting residual N from nodule breakdown. (UNL EC117, NRCS)<br><br>
+    <strong>Leaching &amp; Denitrification</strong> — Model-driven from actual season precipitation (Open-Meteo). Leaching triggers when single events exceed the soil texture threshold (0.75"–2.5"). Denitrification activates after 3+ saturated days.<br><br>
+    <strong>14-day forecast</strong> — Upcoming rain bends the prediction using the same leaching model.<br><br>
+    <strong>VT minimum</strong> — 43% of total seasonal N demand must be available at VT/R1 to complete grain fill. (Ciampitti &amp; Vyn 2013)<br><br>
+    <strong>10/25/50-year range</strong> — Open-Meteo historical daily precip, 1973–present, run through the leaching/denitrification model using your soil texture.
   </div>
+</div>
 
   <div class="section" id="hist-section" style="display:none">
     <h2>50-Year Historical Detail <button id="hist-toggle" onclick="toggleHist()" style="font-size:11px;font-weight:600;padding:3px 10px;border:1.5px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;margin-left:8px;text-transform:none;letter-spacing:0">Show</button></h2>
@@ -415,45 +386,19 @@ function calculate() {
   gv('results').scrollIntoView({behavior:'smooth'});
 }
 
-var _chart=null, _raf=null, _weatherLossPct=null;
+var _chart=null, _weatherLossPct=null;
 
-function _spline(ctx, pts, from, to){
-  ctx.moveTo(pts[from].x, pts[from].y);
-  for(var i=from; i<to; i++){
-    var p0=pts[Math.max(from,i-1)], p1=pts[i], p2=pts[i+1], p3=pts[Math.min(pts.length-1,i+2)];
-    ctx.bezierCurveTo(
-      p1.x+(p2.x-p0.x)/6, p1.y+(p2.y-p0.y)/6,
-      p2.x-(p3.x-p1.x)/6, p2.y-(p3.y-p1.y)/6,
-      p2.x, p2.y
-    );
-  }
-}
-
-function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
-  var canvas=gv('curve');
-  var H=360, W=canvas.offsetWidth||320;
-  var dpr=window.devicePixelRatio||1;
-  canvas.width=W*dpr; canvas.height=H*dpr;
-  canvas.style.width=W+'px'; canvas.style.height=H+'px';
-  var P={t:22,r:88,b:58,l:50};
-  var cw=W-P.l-P.r, ch=H-P.t-P.b;
+function drawChart(demand, totalAvail, stagePct, stageVal, surplus) {
   var n=STAGES.length;
-
   var curIdx=0;
   for(var i=0;i<n;i++){if(STAGES[i].v===stageVal){curIdx=i;break;}}
-
-  var remVals=STAGES.map(function(s){return totalAvail-demand*s.pct/100;});
-  var vtTarget=demand*0.43; // 43% post-VT uptake — Ciampitti & Vyn (2013), modern hybrids
-
-  // Staged N-remaining: line starts low and blips UP as each application hits the pool
+  var vtTarget=demand*0.43;
   var ppR=num('pp-rate'),sdR=num('sd-rate'),f1R=num('f1-rate'),f2R=num('f2-rate'),f3R=num('f3-rate');
   var texD=TEXTURES[gv('soilTexture').value]||TEXTURES.loam;
   var omCr=num('om')*20*texD.minMult, prevCr=gv('prevCrop').value==='soy'?25:0;
   var soilRes=num('soilResidual');
   var lossP=_weatherLossPct!==null?_weatherLossPct:texD.leach1Pct;
   var lm=1-lossP/100;
-  // appPool[stageIdx] = net N added to pool at that stage
-  // soilRes has no loss multiplier — already in ground at test time
   var appPool={0:(ppR+omCr+prevCr)*lm+soilRes};
   if(sdR>0)appPool[2]=sdR*lm;
   if(f1R>0)appPool[3]=f1R*lm;
@@ -461,7 +406,6 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
   if(f3R>0)appPool[5]=f3R*lm;
   var stagPool=0;
   var stagedRemVals=STAGES.map(function(s,i){if(appPool[i])stagPool+=appPool[i];return stagPool-demand*s.pct/100;});
-  // Markers — pre-plant anchors the start so the line's opening value makes sense
   var appMarkers=[];
   if(ppR>0)appMarkers.push({idx:0,raw:ppR,label:'Pre-plant'});
   if(sdR>0)appMarkers.push({idx:2,raw:sdR,label:'Sidedress'});
@@ -469,7 +413,13 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
   if(f2R>0)appMarkers.push({idx:4,raw:f2R,label:'Fert 2'});
   if(f3R>0)appMarkers.push({idx:5,raw:f3R,label:'Fert 3'});
 
-  // Build application legend
+  _chart={demand:demand,totalAvail:totalAvail,surplus:surplus,stagedRemVals:stagedRemVals,
+    appPool:appPool,curIdx:curIdx,vtTarget:vtTarget,appMarkers:appMarkers,
+    _rawRates:{pp:ppR,sd:sdR,f1:f1R,f2:f2R,f3:f3R,omCr:omCr,prevCr:prevCr,soilRes:soilRes},
+    _texD:texD,
+    _sources:{prePlant:Math.round(ppR),sidedress:Math.round(sdR),fert1:Math.round(f1R),fert2:Math.round(f2R),fert3:Math.round(f3R),mineralization:Math.round(omCr),prevCrop:Math.round(prevCr),soilResidual:Math.round(soilRes),inputLosses:Math.round((ppR+sdR+f1R+f2R+f3R)*lossP/100)}};
+
+  // App legend
   var legEl=gv('app-legend');
   if(legEl){
     legEl.innerHTML=appMarkers.map(function(m,i){
@@ -480,327 +430,192 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
     legEl.style.display=appMarkers.length?'flex':'none';
   }
 
-  var maxY=Math.ceil((stagedRemVals[0]+35)/10)*10; // tight ceiling: ~35lb above start
-  var minY=-10; // floor at -10; below zero is already deficient, no need for scale depth
-  var span=maxY-minY;
+  _updateVisuals();
+}
 
-  function xp(i){return P.l+(i/(n-1))*cw;}
-  function yp(v){return P.t+ch-((v-minY)/span)*ch;}
+function _updateVisuals(){
+  var d=_chart; if(!d)return;
+  _renderTimeline(d);
+  _renderGauge(d);
+}
 
-  var rpts=STAGES.map(function(s,i){return{x:xp(i),y:yp(stagedRemVals[i])};});
-  var ok=surplus>=0;
-  var lc=ok?'#1a56a0':'#c0392b';
-  var lca=ok?'rgba(26,86,160,':'rgba(192,57,43,';
+function _renderTimeline(d){
+  var el=gv('milestone-view'); if(!el)return;
+  var sv=d.stagedRemVals, ci=d.curIdx, vt=d.vtTarget, demand=d.demand;
+  var maxVal=Math.max.apply(null,sv.map(function(v){return Math.max(0,v);}));
 
-  // VT Outlook panel — the only benchmark that matters
-  var vtPlanned=Math.round(stagedRemVals[6]||0);
-  var vtMin=Math.round(vtTarget||0);
-  var vtSurp=vtPlanned-vtMin;
-  var vtoEl=gv('vt-outlook');
-  if(vtoEl){
-    vtoEl.style.display='block';
-    gv('vto-planned').textContent=vtPlanned+' lb/ac';
-    gv('vto-min').textContent=vtMin+' lb/ac';
-    var surpEl=gv('vto-surplus');
-    surpEl.textContent=(vtSurp>=0?'+':'')+vtSurp+' lb/ac';
-    surpEl.style.color=vtSurp>=0?'#16a34a':'#dc2626';
-    vtoEl.style.borderColor=vtSurp>=0?'#bbf7d0':'#fecaca';
-    vtoEl.style.borderLeftColor=vtSurp>=0?'#16a34a':'#dc2626';
-    vtoEl.style.background=vtSurp>=0?'#f0fdf4':'#fff5f5';
+  // Colors
+  function dotColor(v,si){
+    if(si>ci) return v>vt*0.5?'#9ca3af':'#fca5a5'; // future: gray or warn
+    return v>30?'#16a34a':v>0?'#f59e0b':'#dc2626';
+  }
+  function dotBg(v,si){
+    if(si>ci) return v>vt*0.5?'#f3f4f6':'#fff5f5';
+    return v>30?'#f0fdf4':v>0?'#fffbeb':'#fff5f5';
   }
 
-  // N Application Recommendation
+  // Stage labels — compact
+  var lbls=['VE-V3','V4-V6','V7-V9','V10-V12','V13-V15','V16-VT','R1','R2','R3','R4','R5-R6'];
+
+  var dotSize=36, connH=3, totalW=lbls.length*56;
+  var html='<div style="position:relative;min-width:'+totalW+'px;padding:8px 0 28px">';
+
+  // Connector line
+  html+='<div style="position:absolute;top:'+(dotSize/2+8)+'px;left:28px;right:28px;height:'+connH+'px;background:#e5e7eb;border-radius:2px"></div>';
+
+  // Progress fill up to curIdx
+  var fillPct=(ci/(STAGES.length-1))*100;
+  html+='<div style="position:absolute;top:'+(dotSize/2+8)+'px;left:28px;width:calc('+fillPct+'% * (100% - 56px) / 100);height:'+connH+'px;background:#16a34a;border-radius:2px"></div>';
+
+  html+='<div style="display:flex;justify-content:space-between;position:relative">';
+  STAGES.forEach(function(s,si){
+    var v=Math.round(sv[si]||0);
+    var isCur=si===ci, isPast=si<ci, isFut=si>ci;
+    var isVT=si===6;
+    var dc=dotColor(v,si), dbg=dotBg(v,si);
+    var size=isCur?44:dotSize;
+    var border=isCur?'3px solid '+dc:'2px solid '+(isPast?dc:'#d1d5db');
+    var bgStyle=isCur?dc:(isPast?dbg:'#f9fafb');
+    var textColor=isCur?'#fff':(isPast?dc:'#9ca3af');
+
+    var topPad=(isCur?0:4)+'px';
+    html+='<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;padding-top:'+topPad+'">';
+
+    // Application marker above dot
+    var appHere=d.appMarkers?d.appMarkers.filter(function(m){return m.idx===si;}):[];
+    if(appHere.length){
+      html+='<div style="font-size:9px;font-weight:700;color:#2d6a2d;white-space:nowrap">+'+appHere.map(function(m){return m.raw;}).join('+')+'</div>';
+    } else {
+      html+='<div style="height:14px"></div>';
+    }
+
+    // Dot
+    html+='<div style="width:'+size+'px;height:'+size+'px;border-radius:50%;border:'+border+';background:'+bgStyle+';display:flex;align-items:center;justify-content:center;flex-direction:column;box-shadow:'+(isCur?'0 0 0 4px rgba(22,163,74,0.15)':'none')+'">';
+    html+='<span style="font-size:'+(isCur?13:10)+'px;font-weight:800;color:'+textColor+';line-height:1">'+v+'</span>';
+    if(isCur) html+='<span style="font-size:8px;color:rgba(255,255,255,0.85);font-weight:600">lb</span>';
+    html+='</div>';
+
+    // Stage label
+    var labelStyle='font-size:9px;font-weight:'+(isCur||isVT?'700':'500')+';color:'+(isCur?dc:isVT?'#1a56a0':'#9ca3af')+';margin-top:4px;white-space:nowrap';
+    html+='<div style="'+labelStyle+'">'+lbls[si]+(isVT?' ★':'')+'</div>';
+
+    // NOW label
+    if(isCur) html+='<div style="font-size:8px;font-weight:800;color:#f59e0b;text-transform:uppercase;letter-spacing:0.05em">NOW</div>';
+    else html+='<div style="height:12px"></div>';
+
+    html+='</div>';
+  });
+  html+='</div></div>';
+  el.innerHTML=html;
+}
+
+function _renderGauge(d){
+  var el=gv('gauge-view'); if(!el)return;
+  var sv=d.stagedRemVals, ci=d.curIdx, vtTarget=d.vtTarget, demand=d.demand;
+  var vtProjected=Math.round(sv[6]||0);
+  var vtMin=Math.round(vtTarget||0);
+  var vtSurplus=vtProjected-vtMin;
+  var vtWorst=d.bands?Math.round(d.bands.p10[6]||0):null;
+  var barMax=Math.max(demand,vtProjected+30);
+  var curRemaining=Math.round(sv[ci]||0);
+
+  var surpColor=vtSurplus>=0?'#16a34a':'#dc2626';
+  var surpBg=vtSurplus>=0?'#f0fdf4':'#fff5f5';
+  var surpBorder=vtSurplus>=0?'#bbf7d0':'#fecaca';
+
+  var html='';
+
+  // Stat row
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">';
+  html+='<div style="background:#f8fafc;border-radius:8px;padding:10px 12px">';
+  html+='<div style="font-size:10px;font-weight:600;color:#9ca3af;margin-bottom:2px">Now ('+STAGES[ci].l+')</div>';
+  html+='<div style="font-size:22px;font-weight:800;color:#1a56a0;line-height:1">'+curRemaining+'</div>';
+  html+='<div style="font-size:10px;color:#9ca3af">lb/ac</div>';
+  html+='</div>';
+
+  html+='<div style="background:#f8fafc;border-radius:8px;padding:10px 12px">';
+  html+='<div style="font-size:10px;font-weight:600;color:#9ca3af;margin-bottom:2px">At VT (proj.)</div>';
+  html+='<div style="font-size:22px;font-weight:800;color:#1a56a0;line-height:1">'+vtProjected+'</div>';
+  html+='<div style="font-size:10px;color:#9ca3af">lb/ac</div>';
+  html+='</div>';
+
+  html+='<div style="background:'+surpBg+';border:1px solid '+surpBorder+';border-radius:8px;padding:10px 12px">';
+  html+='<div style="font-size:10px;font-weight:600;color:#9ca3af;margin-bottom:2px">vs Min ('+vtMin+' lb)</div>';
+  html+='<div style="font-size:22px;font-weight:800;color:'+surpColor+';line-height:1">'+(vtSurplus>=0?'+':'')+vtSurplus+'</div>';
+  html+='<div style="font-size:10px;color:#9ca3af">lb/ac</div>';
+  html+='</div>';
+  html+='</div>';
+
+  // Horizontal gauge bar
+  var vtMinPct=Math.max(0,Math.min(100,(vtMin/barMax)*100));
+  var vtProjPct=Math.max(0,Math.min(100,(vtProjected/barMax)*100));
+  var vtWorstPct=vtWorst!==null?Math.max(0,Math.min(100,(vtWorst/barMax)*100)):null;
+
+  // Zone fills: red 0→min, yellow min→proj (if surplus>0), green proj+
+  var fillColor=vtSurplus>=0?'#16a34a':'#dc2626';
+
+  html+='<div style="margin-bottom:8px">';
+  html+='<div style="font-size:10px;font-weight:600;color:#9ca3af;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em">N at VT — projected vs. minimum needed</div>';
+  html+='<div style="position:relative;height:28px;background:#f3f4f6;border-radius:6px;overflow:hidden">';
+  // Red zone: 0 to VT min
+  html+='<div style="position:absolute;left:0;top:0;width:'+vtMinPct+'%;height:100%;background:rgba(220,38,38,0.15)"></div>';
+  // Fill bar up to projected
+  html+='<div style="position:absolute;left:0;top:0;width:'+vtProjPct+'%;height:100%;background:'+fillColor+';border-radius:6px 0 0 6px;opacity:0.85"></div>';
+  // VT min line
+  html+='<div style="position:absolute;left:'+vtMinPct+'%;top:0;width:2px;height:100%;background:#dc2626;opacity:0.6"></div>';
+  html+='</div>';
+
+  // Labels below bar
+  html+='<div style="position:relative;height:18px">';
+  html+='<div style="position:absolute;left:0;font-size:9px;color:#9ca3af">0</div>';
+  if(vtMinPct>8&&vtMinPct<90){
+    html+='<div style="position:absolute;left:'+vtMinPct+'%;transform:translateX(-50%);font-size:9px;color:#dc2626;font-weight:700">min '+vtMin+'</div>';
+  }
+  html+='<div style="position:absolute;right:0;font-size:9px;color:#9ca3af">'+Math.round(barMax)+'</div>';
+  html+='</div>';
+  html+='</div>';
+
+  // Worst-case row if bands available
+  if(vtWorst!==null){
+    var worstColor=vtWorst>=vtMin?'#16a34a':'#dc2626';
+    html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f8fafc;border-radius:8px;border:1px solid #e5e7eb">';
+    html+='<div style="font-size:18px">⚠</div>';
+    html+='<div>';
+    html+='<div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em">Worst-case year (50yr history)</div>';
+    html+='<div style="font-size:13px;font-weight:700;color:'+worstColor+'">'+vtWorst+' lb/ac at VT — '+(vtWorst>=vtMin?'still above minimum':'below minimum')+'</div>';
+    html+='</div></div>';
+  } else {
+    html+='<div style="font-size:11px;color:#9ca3af;font-style:italic">Loading 50-year weather range…</div>';
+  }
+
+  el.innerHTML=html;
+
+  // Also update vt-rec
   var recEl=gv('vt-rec');
   if(recEl){
-    recEl.style.display='block';
-    var futureApps=appMarkers.filter(function(m){return m.idx>curIdx&&m.idx<=5;});
-    var pastApps=appMarkers.filter(function(m){return m.idx<=curIdx;});
-    var hdr='<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Next Step</div>';
-    if(vtSurp<0){
-      var deficit=Math.abs(vtSurp);
+    var futureApps=d.appMarkers?d.appMarkers.filter(function(m){return m.idx>ci&&m.idx<=6;}):[];
+    if(vtSurplus<0){
+      var deficit=Math.abs(vtSurplus);
       var body='';
       if(futureApps.length>0){
         var addPerPass=Math.ceil(deficit/futureApps.length);
-        body='You\'re projected <strong>'+deficit+' lb/ac short</strong> at VT — even with your planned applications.'
-          +' With <strong>'+futureApps.length+' fertigation pass'+(futureApps.length>1?'es':'')+' remaining</strong>,'
-          +' increase each by <strong>~'+addPerPass+' lb N/ac</strong> to close the gap.';
+        body='You\'re projected <strong>'+deficit+' lb/ac short</strong> at VT. With <strong>'+futureApps.length+' pass'+(futureApps.length>1?'es':'')+' remaining</strong>, add ~<strong>'+addPerPass+' lb N/ac</strong> each.';
       } else {
-        body='You\'re projected <strong>'+deficit+' lb/ac short</strong> at VT with <strong>no fertigation passes remaining</strong>.'
-          +' An emergency application of <strong>'+deficit+' lb N/ac</strong> before VT is strongly recommended.';
+        body='Projected <strong>'+deficit+' lb/ac short</strong> at VT with no passes remaining. Emergency application of <strong>'+deficit+' lb N/ac</strong> before VT is critical.';
       }
-      recEl.style.background='#fff5f5'; recEl.style.borderColor='#fecaca'; recEl.style.borderLeftColor='#dc2626'; recEl.style.color='#7f1d1d';
-      recEl.innerHTML=hdr+body;
-    } else if(vtSurp<25){
-      var trimMsg='';
-      if(futureApps.length>0){var tp=Math.floor(vtSurp/futureApps.length); if(tp>3)trimMsg=' You could trim ~'+tp+' lb/ac from each remaining pass and still hit the minimum.';}
-      recEl.style.background='#fffbeb'; recEl.style.borderColor='#fde68a'; recEl.style.borderLeftColor='#f59e0b'; recEl.style.color='#78350f';
-      recEl.innerHTML=hdr+'On track but tight — projected <strong>+'+vtSurp+' lb/ac</strong> above the VT minimum.'+trimMsg;
+      recEl.style.display='block';
+      recEl.style.cssText='display:block;margin-top:12px;padding:14px 16px;border-radius:10px;border:1px solid #fecaca;border-left:5px solid #dc2626;font-size:13px;line-height:1.5;background:#fff5f5;color:#7f1d1d';
+      recEl.innerHTML='<strong>⚠ Action needed</strong><br>'+body;
+    } else if(vtSurplus<25){
+      recEl.style.display='block';
+      recEl.style.cssText='display:block;margin-top:12px;padding:14px 16px;border-radius:10px;border:1px solid #fde68a;border-left:5px solid #f59e0b;font-size:13px;line-height:1.5;background:#fffbeb;color:#78350f';
+      recEl.innerHTML='<strong>On track but tight</strong> — projected <strong>+'+vtSurplus+' lb/ac</strong> above minimum at VT.';
     } else {
-      var trimMsg2='';
-      if(futureApps.length>0){var tp2=Math.floor(vtSurp/futureApps.length); if(tp2>5)trimMsg2=' To optimize cost, consider trimming <strong>~'+tp2+' lb N/ac</strong> from each of your '+futureApps.length+' remaining pass'+(futureApps.length>1?'es':'')+'.';}
-      recEl.style.background='#f0fdf4'; recEl.style.borderColor='#bbf7d0'; recEl.style.borderLeftColor='#16a34a'; recEl.style.color='#14532d';
-      recEl.innerHTML=hdr+'On track — projected <strong>+'+vtSurp+' lb/ac</strong> above the VT minimum.'+trimMsg2;
+      recEl.style.display='block';
+      recEl.style.cssText='display:block;margin-top:12px;padding:14px 16px;border-radius:10px;border:1px solid #bbf7d0;border-left:5px solid #16a34a;font-size:13px;line-height:1.5;background:#f0fdf4;color:#14532d';
+      recEl.innerHTML='<strong>✓ On track</strong> — projected <strong>+'+vtSurplus+' lb/ac</strong> above the VT minimum.';
     }
   }
-
-  if(_raf)cancelAnimationFrame(_raf);
-  var lossesInput=Math.round((ppR+sdR+f1R+f2R+f3R)*lossP/100);
-  _chart={canvas:canvas,W:W,H:H,P:P,cw:cw,ch:ch,n:n,demand:demand,totalAvail:totalAvail,surplus:surplus,remVals:remVals,stagedRemVals:stagedRemVals,appMarkers:appMarkers,appPool:appPool,curIdx:curIdx,maxY:maxY,minY:minY,span:span,xp:xp,yp:yp,rpts:rpts,vtTarget:vtTarget,lc:lc,lca:lca,ok:ok,dpr:dpr,
-    _sources:{prePlant:Math.round(ppR),sidedress:Math.round(sdR),fert1:Math.round(f1R),fert2:Math.round(f2R),fert3:Math.round(f3R),mineralization:Math.round(omCr),prevCrop:Math.round(prevCr),soilResidual:Math.round(soilRes),inputLosses:lossesInput},
-    _rawRates:{pp:ppR,sd:sdR,f1:f1R,f2:f2R,f3:f3R,omCr:omCr,prevCr:prevCr,soilRes:soilRes},_texD:texD};
-
-  var startTs=null, dur=1100;
-  _raf=requestAnimationFrame(function step(ts){
-    if(!startTs)startTs=ts;
-    var t=Math.min((ts-startTs)/dur,1);
-    var ease=1-Math.pow(1-t,3);
-    _render(ease,-1);
-    if(t<1)_raf=requestAnimationFrame(step);
-    else{_raf=null;_bindEvents();}
-  });
-}
-
-function _render(prog, hover){
-  var d=_chart; if(!d)return;
-  var ctx=d.canvas.getContext('2d');
-  var P=d.P, cw=d.cw, ch=d.ch, W=d.W, H=d.H, n=d.n;
-  var rpts=d.rpts, remVals=d.remVals, curIdx=d.curIdx;
-  var lc=d.lc, lca=d.lca, xp=d.xp, yp=d.yp;
-  var dpr=d.dpr||1;
-
-  ctx.clearRect(0,0,W*dpr,H*dpr);
-  ctx.save(); ctx.scale(dpr,dpr);
-  var bgG=ctx.createLinearGradient(0,P.t,0,P.t+ch);
-  bgG.addColorStop(0,'#eef2f7'); bgG.addColorStop(1,'#f8fafc');
-  ctx.fillStyle=bgG; ctx.fillRect(P.l,P.t,cw,ch);
-
-  ctx.setLineDash([]);
-  for(var v=d.minY;v<=d.maxY;v+=50){
-    var gy=yp(v);
-    ctx.beginPath(); ctx.moveTo(P.l,gy); ctx.lineTo(P.l+cw,gy);
-    ctx.strokeStyle='rgba(0,0,0,0.07)'; ctx.lineWidth=1; ctx.stroke();
-    ctx.fillStyle='#aab4bf'; ctx.font='10px system-ui'; ctx.textAlign='right';
-    ctx.fillText(v,P.l-4,gy+3);
-  }
-
-  var zy=yp(0);
-  ctx.beginPath(); ctx.moveTo(P.l,zy); ctx.lineTo(P.l+cw,zy);
-  ctx.strokeStyle='rgba(0,0,0,0.18)'; ctx.lineWidth=1.5; ctx.stroke();
-
-  var vtIdx=6, vtY=yp(d.vtTarget);
-  if(vtY>=P.t&&vtY<=P.t+ch){
-    ctx.beginPath(); ctx.moveTo(xp(vtIdx),vtY); ctx.lineTo(P.l+cw,vtY);
-    ctx.strokeStyle='rgba(120,120,120,0.32)'; ctx.lineWidth=1; ctx.setLineDash([3,3]); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle='#999'; ctx.font='bold 8px system-ui'; ctx.textAlign='left';
-    ctx.fillText('VT/R1 min',P.l+cw+3,vtY+3);
-  }
-
-  // Historical percentile bands — future only (from Now forward), clipped to chart area
-  // 50yr = outermost/lightest, 25yr = middle, 10yr = innermost/darkest
-  if(d.bands){
-    ctx.save();
-    ctx.beginPath(); ctx.rect(P.l,P.t,cw,ch); ctx.clip();
-    var n2=d.n, ci=d.curIdx;
-    function _drawBand(b, fillOuter, fillInner){
-      ctx.beginPath();
-      for(var i=ci;i<n2;i++){i===ci?ctx.moveTo(xp(i),yp(b.p90[i])):ctx.lineTo(xp(i),yp(b.p90[i]));}
-      for(var i=n2-1;i>=ci;i--){ctx.lineTo(xp(i),yp(b.p10[i]));}
-      ctx.closePath(); ctx.fillStyle=fillOuter; ctx.fill();
-      ctx.beginPath();
-      for(var i=ci;i<n2;i++){i===ci?ctx.moveTo(xp(i),yp(b.p75[i])):ctx.lineTo(xp(i),yp(b.p75[i]));}
-      for(var i=n2-1;i>=ci;i--){ctx.lineTo(xp(i),yp(b.p25[i]));}
-      ctx.closePath(); ctx.fillStyle=fillInner; ctx.fill();
-    }
-    _drawBand(d.bands,   'rgba(100,120,160,0.07)', 'rgba(100,120,160,0.10)'); // 50yr
-    if(d.bands25) _drawBand(d.bands25, 'rgba(80,140,170,0.09)', 'rgba(80,140,170,0.13)'); // 25yr
-    if(d.bands10) _drawBand(d.bands10, 'rgba(60,160,140,0.11)', 'rgba(60,160,140,0.17)'); // 10yr
-    ctx.restore();
-  }
-
-  ctx.save();
-  ctx.beginPath(); ctx.rect(P.l-1,0,cw*prog+2,H); ctx.clip();
-
-  // Segment helpers — break spline at each application for sharp full-amount jumps
-  var appBreaks=d.appMarkers?d.appMarkers.map(function(m){return m.idx;}):[];
-  function _segPts(from,to,endPreApp){
-    var pts=[];
-    for(var i=from;i<=to;i++){
-      var v=d.stagedRemVals[i]||0;
-      if(i===to&&endPreApp&&d.appPool[to])v-=d.appPool[to];
-      pts.push({x:xp(i),y:yp(v)});
-    }
-    return pts;
-  }
-  function _getSegs(fromSt,toSt){
-    var segs=[],cursor=fromSt;
-    for(var bi=0;bi<appBreaks.length;bi++){
-      var bk=appBreaks[bi];
-      if(bk<=fromSt||bk>toSt)continue;
-      var preV=(d.stagedRemVals[bk]||0)-(d.appPool[bk]||0);
-      segs.push({pts:_segPts(cursor,bk,true),jx:xp(bk),jFrom:yp(preV),jTo:yp(d.stagedRemVals[bk]||0)});
-      cursor=bk;
-    }
-    segs.push({pts:_segPts(cursor,toSt,false),jx:null});
-    return segs;
-  }
-
-
-  var vtEnd=Math.min(vtIdx,n-1);
-
-  // Future dashed line — from Now to end of season (full prediction)
-  if(curIdx<n-1){
-    _getSegs(curIdx,n-1).forEach(function(seg){
-      if(seg.pts.length<2)return;
-      ctx.beginPath(); _spline(ctx,seg.pts,0,seg.pts.length-1);
-      ctx.strokeStyle=lca+'0.6)'; ctx.lineWidth=3; ctx.setLineDash([8,5]);
-      ctx.shadowColor=lca+'0.3)'; ctx.shadowBlur=6;
-      ctx.stroke(); ctx.setLineDash([]); ctx.shadowBlur=0;
-      if(seg.jx!==null){
-        ctx.beginPath(); ctx.moveTo(seg.jx,seg.jFrom); ctx.lineTo(seg.jx,seg.jTo);
-        ctx.strokeStyle=lca+'0.6)'; ctx.lineWidth=3; ctx.setLineDash([8,5]);
-        ctx.stroke(); ctx.setLineDash([]);
-      }
-    });
-  }
-
-  // Past solid line — segmented with sharp jumps at applications
-  if(curIdx>0){
-    _getSegs(0,curIdx).forEach(function(seg){
-      if(seg.pts.length<2)return;
-      ctx.beginPath(); _spline(ctx,seg.pts,0,seg.pts.length-1);
-      ctx.strokeStyle=lc; ctx.lineWidth=3.5;
-      ctx.shadowColor=lca+'0.7)'; ctx.shadowBlur=18;
-      ctx.stroke(); ctx.shadowBlur=0;
-      if(seg.jx!==null){
-        ctx.beginPath(); ctx.moveTo(seg.jx,seg.jFrom); ctx.lineTo(seg.jx,seg.jTo);
-        ctx.strokeStyle=lc; ctx.lineWidth=3.5;
-        ctx.shadowColor=lca+'0.7)'; ctx.shadowBlur=18;
-        ctx.stroke(); ctx.shadowBlur=0;
-      }
-    });
-  }
-
-  // Application markers — numbered circles at bottom of chart
-  if(d.appMarkers&&d.appPool){
-    var clipX=P.l+cw*prog;
-    d.appMarkers.forEach(function(m,mi){
-      var x=xp(m.idx);
-      if(x>clipX+2)return;
-      var isPast=m.idx<=curIdx;
-      var bc=isPast?'#2d6a2d':'rgba(45,106,45,0.38)';
-      var cy=P.t+ch+26;
-      ctx.beginPath(); ctx.arc(x,cy,10,0,Math.PI*2);
-      ctx.fillStyle=bc; ctx.fill();
-      ctx.fillStyle='#fff'; ctx.font='bold 11px system-ui'; ctx.textAlign='center';
-      ctx.fillText(mi+1, x, cy+4);
-    });
-  }
-
-  // Rainfall strips along top — future only, clipped inside chart area
-  if(d.stagePrecip){
-    ctx.save();
-    ctx.beginPath(); ctx.rect(P.l,P.t,cw,ch); ctx.clip();
-    var stripMax=22;
-    var futurePrecip=d.stagePrecip.slice(curIdx);
-    var maxP=Math.max.apply(null,futurePrecip.map(function(v){return v||0;}))||1;
-    for(var i=curIdx;i<d.stagePrecip.length;i++){
-      var p=d.stagePrecip[i]||0; if(p<=0)continue;
-      var barW=Math.max(5,(cw/(n-1))*0.65);
-      var bh2=Math.max(3,stripMax*(p/maxP));
-      var bx3=xp(i)-barW/2;
-      ctx.fillStyle='rgba(59,130,246,0.22)';
-      ctx.fillRect(bx3, P.t+2, barW, bh2);
-      ctx.fillStyle='rgba(59,130,246,0.55)';
-      ctx.font='bold 8px system-ui'; ctx.textAlign='center';
-      ctx.fillText(p.toFixed(1)+'"', xp(i), P.t+bh2+12);
-    }
-    ctx.restore();
-  }
-
-  ctx.restore();
-
-  ctx.beginPath(); ctx.moveTo(rpts[curIdx].x,P.t); ctx.lineTo(rpts[curIdx].x,P.t+ch);
-  ctx.strokeStyle='rgba(245,158,11,0.55)'; ctx.lineWidth=1.5; ctx.setLineDash([5,3]); ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle='#f59e0b'; ctx.font='bold 9px system-ui'; ctx.textAlign='center';
-  ctx.fillText('Now',rpts[curIdx].x,P.t+ch+14);
-
-
-  // VT projected label on right axis — the only benchmark that matters
-  var vtIdx=6;
-  var vtProjected=d.stagedRemVals[vtIdx]||0;
-  var vtMin=d.vtTarget||0;
-  var vtSurplus=Math.round(vtProjected-vtMin);
-  var vtColor=vtSurplus>=0?'#1a56a0':'#c0392b';
-  var vtLabelY=yp(vtProjected);
-  ctx.fillStyle=vtColor; ctx.font='bold 10px system-ui'; ctx.textAlign='left';
-  ctx.fillText(Math.round(vtProjected)+' lb',P.l+cw+3,vtLabelY+3);
-  ctx.fillStyle=vtSurplus>=0?'#4ade80':'#f87171'; ctx.font='bold 9px system-ui';
-  ctx.fillText((vtSurplus>=0?'+':'')+vtSurplus+' vs min',P.l+cw+3,vtLabelY+14);
-
-  if(hover>=0&&hover!==curIdx){
-    ctx.beginPath(); ctx.moveTo(rpts[hover].x,P.t); ctx.lineTo(rpts[hover].x,P.t+ch);
-    ctx.strokeStyle='rgba(0,0,0,0.13)'; ctx.lineWidth=1; ctx.setLineDash([3,3]); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.beginPath(); ctx.arc(rpts[hover].x,rpts[hover].y,5.5,0,Math.PI*2);
-    ctx.fillStyle='#fff'; ctx.fill(); ctx.strokeStyle=lc; ctx.lineWidth=2; ctx.stroke();
-  }
-
-  ctx.fillStyle='#9ca3af'; ctx.font='9px system-ui'; ctx.textAlign='center';
-  for(var i=0;i<n;i++){
-    if(i%2===0||i===curIdx) ctx.fillText(STAGES[i].l,rpts[i].x,H-6);
-  }
-
-  ctx.restore();
-}
-
-
-function _bindEvents(){
-  var d=_chart; if(!d)return;
-  var canvas=d.canvas, tip=gv('chart-tip');
-
-  function nearest(px){
-    var bi=0,bd=1e9;
-    for(var i=0;i<d.n;i++){var dx=Math.abs(d.rpts[i].x-px);if(dx<bd){bd=dx;bi=i;}}
-    return bi;
-  }
-
-  function showTip(clientX, clientY, idx){
-    _render(1,idx);
-    var v=(d.stagedRemVals||d.remVals)[idx], proj=idx>d.curIdx;
-    var lbl=v>30?'Sufficient':v>10?'Marginal':v>0?'Borderline':'Deficient';
-    var col=v>30?'#4ade80':v>10?'#fbbf24':v>0?'#f97316':'#f87171';
-    var bandHtml='';
-    if(d.bands){
-      var p10=Math.round(d.bands.p10[idx]), p90=Math.round(d.bands.p90[idx]), p50=Math.round(d.bands.p50[idx]);
-      bandHtml='<div style="margin-top:5px;font-size:10px;color:#aab4bf">50-yr range: <strong style="color:#ccc">'+p10+'–'+p90+' lb</strong><br>Median: <strong style="color:#ccc">'+p50+' lb</strong></div>';
-    }
-    tip.innerHTML='<div style="font-weight:800;font-size:13px;margin-bottom:3px">'+STAGES[idx].l+'</div>'+
-      'N Remaining: <span style="color:'+d.lc+';font-weight:800">'+Math.round(v)+' lb/ac</span><br>'+
-      '<span style="color:'+col+';font-size:11px;font-weight:700">'+lbl+'</span>'+
-      (proj?'<div style="margin-top:3px;font-size:10px;opacity:0.55;font-style:italic">projected</div>':'')+
-      bandHtml;
-    tip.style.display='block';
-    var tw=tip.offsetWidth, th=tip.offsetHeight;
-    tip.style.left=Math.max(4,Math.min(clientX-tw/2,window.innerWidth-tw-4))+'px';
-    tip.style.top=(clientY-th-18)+'px';
-  }
-
-  function hideTip(){
-    tip.style.display='none';
-    _render(1,-1);
-    _pulse();
-  }
-
-  canvas.onmousemove=function(e){showTip(e.clientX,e.clientY,nearest(e.offsetX));};
-  canvas.onmouseleave=hideTip;
-  canvas.ontouchmove=function(e){
-    e.preventDefault();
-    var t=e.touches[0],rect=canvas.getBoundingClientRect();
-    showTip(t.clientX,t.clientY,nearest(t.clientX-rect.left));
-  };
-  canvas.ontouchend=hideTip;
 }
 
 var _STAGE_DAYS_SIM = [7, 21, 35, 49, 63, 75, 83, 93, 103, 113, 125];
@@ -946,7 +761,6 @@ async function fetchWeatherBands(){
             return wStagPool-_chart.demand*s.pct/100;
           });
           _chart.appPool=wPool;
-          _chart.rpts=STAGES.map(function(s,si){return{x:_chart.xp(si),y:_chart.yp(_chart.stagedRemVals[si])};});
         }
         var lossEl=gv('n-loss-breakdown');
         if(lossEl&&cm&&_chart._sources){
@@ -1009,7 +823,6 @@ async function fetchWeatherBands(){
             var forecastDelta=fcSim[si]-pastOnlySim[si]; // negative = more loss from forecast rain
             return _chart.stagedRemVals[si]+forecastDelta;
           });
-          _chart.rpts=STAGES.map(function(st,si){return{x:_chart.xp(si),y:_chart.yp(_chart.stagedRemVals[si])};});
         }
       }catch(e3){/* forecast unavailable — prediction uses texture default */}
     }catch(e2){/* silently skip current-season precip if unavailable */}
@@ -1019,19 +832,8 @@ async function fetchWeatherBands(){
     _chart.yearRows=yearRows;
     _chart.curIdx2=_chart.curIdx;
     if(ws){ws.textContent='Historical range based on '+allRem.length+' years of weather data \u00b7 '+county+', '+state;}
-    var lb=gv('leg-bands'); if(lb)lb.style.display='';
-    var lfc=gv('leg-forecast'); if(lfc)lfc.style.display='';
-    // Update VT outlook with weather stress test
-    var vtStress=Math.round(bands.p10[6]||0);
-    var vtMin2=Math.round(_chart.vtTarget||0);
-    var stressEl=gv('vto-stress'), stressWrap=gv('vto-stress-wrap');
-    if(stressEl&&stressWrap){
-      stressWrap.style.display='';
-      stressEl.textContent=vtStress+' lb/ac';
-      stressEl.style.color=vtStress>=vtMin2?'#16a34a':'#dc2626';
-    }
     _renderHistTable();
-    _render(1,-1);
+    _updateVisuals();
   } catch(e){
     console.warn('Weather bands:',e.message);
     if(ws){ws.textContent='Weather history unavailable for this location.';ws.style.color='#f87171';}
@@ -1077,67 +879,6 @@ function toggleHist(){
   var open=wrap.style.display==='none';
   wrap.style.display=open?'':'none';
   btn.textContent=open?'Hide':'Show';
-}
-
-// Fullscreen landscape chart
-function openChartFullscreen(){
-  var overlay=gv('chart-fs-overlay');
-  if(!overlay){
-    overlay=document.createElement('div');
-    overlay.id='chart-fs-overlay';
-    overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:#f8fafc';
-    var closeBtn=document.createElement('button');
-    closeBtn.textContent='✕';
-    closeBtn.style.cssText='position:absolute;top:10px;right:14px;z-index:1;background:none;border:none;font-size:22px;color:#6b7280;cursor:pointer;padding:4px 8px;line-height:1';
-    closeBtn.onclick=closeChartFullscreen;
-    var fsCanvas=document.createElement('canvas');
-    fsCanvas.id='curve-fs';
-    fsCanvas.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%';
-    overlay.appendChild(closeBtn);
-    overlay.appendChild(fsCanvas);
-    document.body.appendChild(overlay);
-  }
-  overlay.style.display='block';
-  if(screen.orientation&&screen.orientation.lock){
-    screen.orientation.lock('landscape').catch(function(){});
-  }
-  // Double rAF: first lets the overlay lay out, second measures actual rendered size
-  requestAnimationFrame(function(){
-    requestAnimationFrame(function(){
-      _renderFullscreen();
-    });
-  });
-}
-
-function _renderFullscreen(){
-  var fsCanvas=gv('curve-fs');
-  if(!fsCanvas||!_chart)return;
-  var W=document.documentElement.clientWidth||window.innerWidth;
-  var H=document.documentElement.clientHeight||window.innerHeight;
-  var dpr=window.devicePixelRatio||1;
-  fsCanvas.width=Math.round(W*dpr);
-  fsCanvas.height=Math.round(H*dpr);
-  var saved={canvas:_chart.canvas,W:_chart.W,H:_chart.H,P:_chart.P,
-    cw:_chart.cw,ch:_chart.ch,rpts:_chart.rpts,xp:_chart.xp,yp:_chart.yp,dpr:_chart.dpr};
-  var P={t:28,r:96,b:44,l:54};
-  var cw=W-P.l-P.r, ch=H-P.t-P.b;
-  var span=_chart.maxY-_chart.minY;
-  var n=_chart.n;
-  function xp(i){return P.l+(i/(n-1))*cw;}
-  function yp(v){return P.t+ch-((v-_chart.minY)/span)*ch;}
-  _chart.canvas=fsCanvas; _chart.W=W; _chart.H=H; _chart.P=P;
-  _chart.cw=cw; _chart.ch=ch; _chart.xp=xp; _chart.yp=yp; _chart.dpr=dpr;
-  _chart.rpts=_chart.stagedRemVals.map(function(v,i){return{x:xp(i),y:yp(v)};});
-  _render(1,-1);
-  _chart.canvas=saved.canvas; _chart.W=saved.W; _chart.H=saved.H; _chart.P=saved.P;
-  _chart.cw=saved.cw; _chart.ch=saved.ch; _chart.xp=saved.xp; _chart.yp=saved.yp;
-  _chart.rpts=saved.rpts; _chart.dpr=saved.dpr;
-}
-
-function closeChartFullscreen(){
-  var overlay=gv('chart-fs-overlay');
-  if(overlay)overlay.style.display='none';
-  if(screen.orientation&&screen.orientation.unlock)screen.orientation.unlock();
 }
 
 // ── Field map + SSURGO soil lookup ──────────────────────────────────────────
