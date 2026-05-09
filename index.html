@@ -225,7 +225,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
     <h2>Season N Demand Curve <button onclick="openChartFullscreen()" style="float:right;background:none;border:1.5px solid #d1d5db;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:13px;color:#6b7280;line-height:1" title="Fullscreen landscape">⛶</button></h2>
     <canvas id="curve" height="340"></canvas>
     <div class="chart-legend">
-      <span class="leg-item"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#1a56a0;vertical-align:middle"></span> N Now</span>
+      <span class="leg-item"><span class="leg-solid"></span> N Remaining</span>
       <span class="leg-item"><span class="leg-dash"></span> Projected to VT</span>
       <span class="leg-item" id="leg-bands" style="display:none"><span style="display:inline-block;width:20px;height:8px;background:rgba(100,120,150,0.18);border-radius:2px"></span> 50-yr range</span>
     </div>
@@ -677,12 +677,22 @@ function _render(prog, hover){
     });
   }
 
-  // Current N position — dot at current stage
-  var curX=rpts[curIdx].x, curY=rpts[curIdx].y;
-  ctx.beginPath(); ctx.arc(curX,curY,7,0,Math.PI*2);
-  ctx.fillStyle=lc; ctx.shadowColor=lca+'0.6)'; ctx.shadowBlur=14; ctx.fill(); ctx.shadowBlur=0;
-  ctx.beginPath(); ctx.arc(curX,curY,4,0,Math.PI*2);
-  ctx.fillStyle='#fff'; ctx.fill();
+  // Past solid line — segmented with sharp jumps at applications
+  if(curIdx>0){
+    _getSegs(0,curIdx).forEach(function(seg){
+      if(seg.pts.length<2)return;
+      ctx.beginPath(); _spline(ctx,seg.pts,0,seg.pts.length-1);
+      ctx.strokeStyle=lc; ctx.lineWidth=3.5;
+      ctx.shadowColor=lca+'0.7)'; ctx.shadowBlur=18;
+      ctx.stroke(); ctx.shadowBlur=0;
+      if(seg.jx!==null){
+        ctx.beginPath(); ctx.moveTo(seg.jx,seg.jFrom); ctx.lineTo(seg.jx,seg.jTo);
+        ctx.strokeStyle=lc; ctx.lineWidth=3.5;
+        ctx.shadowColor=lca+'0.7)'; ctx.shadowBlur=18;
+        ctx.stroke(); ctx.shadowBlur=0;
+      }
+    });
+  }
 
   // Application markers — numbered circles at bottom of chart
   if(d.appMarkers&&d.appPool){
