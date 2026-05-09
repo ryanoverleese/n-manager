@@ -200,7 +200,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
     <div style="margin-top:8px"><label>Application Date</label><input type="date" id="f3-date" style="width:100%;box-sizing:border-box"></div>
   </div>
   <div class="app-box" style="border-color:#f59e0b;background:#fffbeb">
-    <h3 style="color:#92400e">Post-VT <span style="font-weight:400;font-size:12px;color:#b45309">(R1–R3, reduced efficiency)</span></h3>
+    <h3 style="color:#92400e">Post-VT <span style="font-weight:400;font-size:12px;color:#b45309">(R1–R3, grain protein fill)</span></h3>
     <div class="row2">
       <div><label>Product</label>
         <select id="pvt-prod">
@@ -210,7 +210,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
       <div><label>Rate (lb N/acre)</label><input type="number" id="pvt-rate" value="0" min="0" max="60"></div>
     </div>
     <div style="margin-top:8px"><label>Application Date</label><input type="date" id="pvt-date" style="width:100%;box-sizing:border-box"></div>
-    <div style="margin-top:6px;font-size:11px;color:#92400e">⚠ Post-VT N is applied at ~50% efficiency — crop uptake capacity is limited after tassel. Grain protein benefit only.</div>
+    <div style="margin-top:6px;font-size:11px;color:#92400e">Via pivot fertigation — highly efficient delivery. Supports grain protein and late-season fill when N is limiting.</div>
   </div>
 </div>
 
@@ -414,8 +414,8 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus) {
   if(f1R>0)appPool[3]=f1R*lm;
   if(f2R>0)appPool[4]=f2R*lm;
   if(f3R>0)appPool[5]=f3R*lm;
-  // Post-VT at ~50% efficiency (stage 7 = R2)
-  if(pvtR>0)appPool[7]=pvtR*lm*0.5;
+  // Post-VT via fertigation — full efficiency, supports grain protein fill (R2)
+  if(pvtR>0)appPool[7]=pvtR*lm;
   var stagPool=0;
   var stagedRemVals=STAGES.map(function(s,i){if(appPool[i])stagPool+=appPool[i];return stagPool-demand*s.pct/100;});
   var today=new Date().toISOString().split('T')[0];
