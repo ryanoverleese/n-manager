@@ -95,7 +95,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
     <div><label>Soil OM (%)</label><input type="number" id="om" value="2.8" min="0.5" max="8" step="0.1"><div class="hint">OM × 20 = lb N/acre credit</div></div>
     <div>
       <label>Soil Texture</label>
-      <select id="soilTexture" onchange="calculate()">
+      <select id="soilTexture" onchange="updateTextureUI();calculate()">
         <option value="sand">Sandy / Loamy Sand</option>
         <option value="sandyLoam">Sandy Loam</option>
         <option value="loam" selected>Loam / Silt Loam</option>
@@ -193,13 +193,13 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
   <label>Leaching / Over-Irrigation Events</label>
   <div class="radio-group">
     <label><input type="radio" name="leach" value="0"> None — 0% N loss</label>
-    <label><input type="radio" name="leach" value="1" checked> 1 event (&gt;1.5" rain or heavy over-irrigation) — 10% loss</label>
-    <label><input type="radio" name="leach" value="2"> 2+ events — 20% loss</label>
+    <label><input type="radio" name="leach" value="1" checked> 1 event — <span id="leach1-lbl">10%</span> loss</label>
+    <label><input type="radio" name="leach" value="2"> 2+ events — <span id="leach2-lbl">20%</span> loss</label>
   </div>
   <div style="margin-top:14px">
     <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer">
       <input type="checkbox" id="saturated" style="width:auto">
-      <span>Saturated soils &gt;48 hours — adds 15% N loss</span>
+      <span>Saturated soils &gt;48 hours — adds <span id="sat-lbl">15%</span> N loss</span>
     </label>
   </div>
 </div>
@@ -256,7 +256,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
         <strong>Denitrification</strong> — After 3+ consecutive days of saturated soil, soil bacteria convert NO₃ to gas in the absence of oxygen, losing an estimated 2.5% of available N per day.<br><br>
         <strong>N uptake curve</strong> — Ciampitti &amp; Vyn (2013): 43% of total N uptake occurs after VT in modern high-yield hybrids. Pre-VT distribution follows the same research.<br><br>
         <strong>VT minimum</strong> — 43% of total seasonal N demand must be available at VT/R1 to complete grain fill.<br><br>
-        <strong>Soil texture</strong> — adjusts leaching and denitrification thresholds. Sandy soils start leaching at 0.75" rain events with up to 35% N loss per event; clay soils require 2.5" before leaching occurs with only 8% max loss. Denitrification rate and trigger also scale with texture.<br><br>
+        <strong>Soil texture</strong> — affects the full N cycle. (1) Mineralization: sandy soils release ~75% of the OM credit; clay soils release ~115% due to higher microbial activity and water retention. (2) Leaching: sandy soils lose 20% per event vs. 4% for clay — and the weather simulation uses texture-specific thresholds (0.75"–2.5"). (3) Denitrification: clay soils lose up to 28% when saturated vs. 6% for sand, and trigger sooner.<br><br>
         <strong>50-year weather bands</strong> — Open-Meteo historical daily precipitation for your county, 1973–present, run through the same leaching and denitrification model using your selected soil texture. Bands show 10th, 25th, 50th, 75th, and 90th percentile outcomes across all years.
       </div>
     </div>
@@ -306,11 +306,13 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
 // denitrDays: consecutive sat-days to trigger denitrification
 // denitrRate: fraction of avail N lost per denitrification day
 var TEXTURES = {
-  sand:     {leachThresh:0.75, leachMax:0.35, leachRate:0.15, denitrDays:4, denitrRate:0.015},
-  sandyLoam:{leachThresh:1.0,  leachMax:0.25, leachRate:0.11, denitrDays:3, denitrRate:0.020},
-  loam:     {leachThresh:1.5,  leachMax:0.20, leachRate:0.09, denitrDays:3, denitrRate:0.025},
-  clayLoam: {leachThresh:2.0,  leachMax:0.12, leachRate:0.06, denitrDays:2, denitrRate:0.035},
-  clay:     {leachThresh:2.5,  leachMax:0.08, leachRate:0.04, denitrDays:2, denitrRate:0.045}
+  //                          --- weather sim ---                          --- manual inputs ---           -- mineral --
+  //                 thresh  max    rate  dDays dRate    leach1% leach2%  sat%   minMult
+  sand:     {leachThresh:0.75, leachMax:0.35, leachRate:0.15, denitrDays:4, denitrRate:0.015, leach1Pct:20, leach2Pct:35, satPct:6,  minMult:0.75},
+  sandyLoam:{leachThresh:1.0,  leachMax:0.25, leachRate:0.11, denitrDays:3, denitrRate:0.020, leach1Pct:14, leach2Pct:25, satPct:10, minMult:0.88},
+  loam:     {leachThresh:1.5,  leachMax:0.20, leachRate:0.09, denitrDays:3, denitrRate:0.025, leach1Pct:10, leach2Pct:20, satPct:15, minMult:1.00},
+  clayLoam: {leachThresh:2.0,  leachMax:0.12, leachRate:0.06, denitrDays:2, denitrRate:0.035, leach1Pct:6,  leach2Pct:12, satPct:22, minMult:1.10},
+  clay:     {leachThresh:2.5,  leachMax:0.08, leachRate:0.04, denitrDays:2, denitrRate:0.045, leach1Pct:4,  leach2Pct:8,  satPct:28, minMult:1.15}
 };
 
 // N uptake curve based on Ciampitti & Vyn (2013) / Bender et al. for modern high-yield hybrids:
@@ -327,6 +329,14 @@ var STAGES = [
 function gv(id) { return document.getElementById(id); }
 function num(id) { return parseFloat(gv(id).value) || 0; }
 
+function updateTextureUI(){
+  var t=TEXTURES[gv('soilTexture').value]||TEXTURES.loam;
+  var l1=gv('leach1-lbl'), l2=gv('leach2-lbl'), ls=gv('sat-lbl');
+  if(l1)l1.textContent=t.leach1Pct+'%';
+  if(l2)l2.textContent=t.leach2Pct+'%';
+  if(ls)ls.textContent=t.satPct+'%';
+}
+
 function calculate() {
   var yg = num('yieldGoal');
   var stageEl = gv('stage');
@@ -341,14 +351,16 @@ function calculate() {
   var f3 = num('f3-rate');
   var leach = parseInt(document.querySelector('input[name=leach]:checked').value);
   var sat = gv('saturated').checked;
+  var tex = TEXTURES[gv('soilTexture').value] || TEXTURES.loam;
 
   var nFactor = Math.max(0.5, Math.min(1.4, num('nFactor') || 1.1));
   var demand = yg * nFactor;
-  var omCredit = om * 20;
+  var omCredit = om * 20 * tex.minMult;
   var prevCredit = prevCrop === 'soy' ? 25 : 0;
   var appliedN = ppRate + sdRate + f1 + f2 + f3;
-  var lossPct = leach * 10 + (sat ? 15 : 0);
-  if (lossPct > 50) lossPct = 50;
+  var leachPct = leach===0 ? 0 : leach===1 ? tex.leach1Pct : tex.leach2Pct;
+  var lossPct = leachPct + (sat ? tex.satPct : 0);
+  if (lossPct > 65) lossPct = 65;
   var losses = appliedN * lossPct / 100;
   var totalAvail = appliedN + omCredit + prevCredit - losses;
   var uptakeToDate = demand * stagePct / 100;
@@ -436,9 +448,11 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
 
   // Staged N-remaining: line starts low and blips UP as each application hits the pool
   var ppR=num('pp-rate'),sdR=num('sd-rate'),f1R=num('f1-rate'),f2R=num('f2-rate'),f3R=num('f3-rate');
-  var omCr=num('om')*20, prevCr=gv('prevCrop').value==='soy'?25:0;
+  var texD=TEXTURES[gv('soilTexture').value]||TEXTURES.loam;
+  var omCr=num('om')*20*texD.minMult, prevCr=gv('prevCrop').value==='soy'?25:0;
   var leachV=parseInt(document.querySelector('input[name=leach]:checked').value);
-  var lossP=Math.min(50,leachV*10+(gv('saturated').checked?15:0));
+  var leachPctD=leachV===0?0:leachV===1?texD.leach1Pct:texD.leach2Pct;
+  var lossP=Math.min(65,leachPctD+(gv('saturated').checked?texD.satPct:0));
   var lm=1-lossP/100;
   // appPool[stageIdx] = net N added to pool at that stage
   var appPool={0:(ppR+omCr+prevCr)*lm};
@@ -1033,6 +1047,8 @@ function closeChartFullscreen(){
   if(overlay)overlay.style.display='none';
   if(screen.orientation&&screen.orientation.unlock)screen.orientation.unlock();
 }
+
+updateTextureUI();
 </script>
 </body>
 </html>
