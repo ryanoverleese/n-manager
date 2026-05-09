@@ -608,18 +608,18 @@ function _render(prog, hover){
     ctx.fillText('VT/R1 min',P.l+cw+3,vtY+3);
   }
 
-  // Historical percentile bands — clipped so they don't bleed outside chart area
+  // Historical percentile bands — future only (from Now forward), clipped to chart area
   if(d.bands){
     ctx.save();
     ctx.beginPath(); ctx.rect(P.l,P.t,cw,ch); ctx.clip();
-    var b=d.bands, n2=d.n;
+    var b=d.bands, n2=d.n, ci=d.curIdx;
     ctx.beginPath();
-    for(var i=0;i<n2;i++){i===0?ctx.moveTo(xp(i),yp(b.p90[i])):ctx.lineTo(xp(i),yp(b.p90[i]));}
-    for(var i=n2-1;i>=0;i--){ctx.lineTo(xp(i),yp(b.p10[i]));}
+    for(var i=ci;i<n2;i++){i===ci?ctx.moveTo(xp(i),yp(b.p90[i])):ctx.lineTo(xp(i),yp(b.p90[i]));}
+    for(var i=n2-1;i>=ci;i--){ctx.lineTo(xp(i),yp(b.p10[i]));}
     ctx.closePath(); ctx.fillStyle='rgba(100,120,160,0.09)'; ctx.fill();
     ctx.beginPath();
-    for(var i=0;i<n2;i++){i===0?ctx.moveTo(xp(i),yp(b.p75[i])):ctx.lineTo(xp(i),yp(b.p75[i]));}
-    for(var i=n2-1;i>=0;i--){ctx.lineTo(xp(i),yp(b.p25[i]));}
+    for(var i=ci;i<n2;i++){i===ci?ctx.moveTo(xp(i),yp(b.p75[i])):ctx.lineTo(xp(i),yp(b.p75[i]));}
+    for(var i=n2-1;i>=ci;i--){ctx.lineTo(xp(i),yp(b.p25[i]));}
     ctx.closePath(); ctx.fillStyle='rgba(100,120,160,0.14)'; ctx.fill();
     ctx.restore();
   }
@@ -703,24 +703,25 @@ function _render(prog, hover){
     });
   }
 
-  // Rainfall strips along top — thin bars growing downward from top edge
+  // Rainfall strips along top — future only, clipped inside chart area
   if(d.stagePrecip){
-    var stripMax=22; // max strip height in px
-    var maxP=Math.max.apply(null,d.stagePrecip.map(function(v){return v||0;}))||1;
-    for(var i=0;i<d.stagePrecip.length;i++){
+    ctx.save();
+    ctx.beginPath(); ctx.rect(P.l,P.t,cw,ch); ctx.clip();
+    var stripMax=22;
+    var futurePrecip=d.stagePrecip.slice(curIdx);
+    var maxP=Math.max.apply(null,futurePrecip.map(function(v){return v||0;}))||1;
+    for(var i=curIdx;i<d.stagePrecip.length;i++){
       var p=d.stagePrecip[i]||0; if(p<=0)continue;
       var barW=Math.max(5,(cw/(n-1))*0.65);
       var bh2=Math.max(3,stripMax*(p/maxP));
       var bx3=xp(i)-barW/2;
-      ctx.fillStyle=i<=curIdx?'rgba(59,130,246,0.62)':'rgba(59,130,246,0.22)';
+      ctx.fillStyle='rgba(59,130,246,0.22)';
       ctx.fillRect(bx3, P.t+2, barW, bh2);
-      // Always label bars
-      ctx.fillStyle=i<=curIdx?'rgba(37,99,235,0.85)':'rgba(59,130,246,0.55)';
+      ctx.fillStyle='rgba(59,130,246,0.55)';
       ctx.font='bold 8px system-ui'; ctx.textAlign='center';
       ctx.fillText(p.toFixed(1)+'"', xp(i), P.t+bh2+12);
     }
-    ctx.fillStyle='rgba(59,130,246,0.6)'; ctx.font='700 8px system-ui'; ctx.textAlign='right';
-    ctx.fillText('Rain',P.l-3,P.t+10);
+    ctx.restore();
   }
 
   ctx.restore();
