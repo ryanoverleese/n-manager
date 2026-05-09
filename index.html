@@ -149,6 +149,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
         </select></div>
       <div><label>Rate (lb N/acre)</label><input type="number" id="pp-rate" value="150" min="0" max="300"></div>
     </div>
+    <div style="margin-top:8px"><label>Application Date</label><input type="date" id="pp-date" style="width:100%;box-sizing:border-box"></div>
   </div>
   <div class="app-box">
     <h3>Sidedress</h3>
@@ -160,6 +161,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
         </select></div>
       <div><label>Rate (lb N/acre)</label><input type="number" id="sd-rate" value="45" min="0" max="300"></div>
     </div>
+    <div style="margin-top:8px"><label>Application Date</label><input type="date" id="sd-date" style="width:100%;box-sizing:border-box"></div>
   </div>
   <div class="app-box">
     <h3>Fertigation 1</h3>
@@ -171,6 +173,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
         </select></div>
       <div><label>Rate (lb N/acre)</label><input type="number" id="f1-rate" value="20" min="0" max="150"></div>
     </div>
+    <div style="margin-top:8px"><label>Application Date</label><input type="date" id="f1-date" style="width:100%;box-sizing:border-box"></div>
   </div>
   <div class="app-box">
     <h3>Fertigation 2 <span style="font-weight:400;font-size:12px;color:#9ca3af">(optional)</span></h3>
@@ -182,6 +185,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
         </select></div>
       <div><label>Rate (lb N/acre)</label><input type="number" id="f2-rate" value="0" min="0" max="150"></div>
     </div>
+    <div style="margin-top:8px"><label>Application Date</label><input type="date" id="f2-date" style="width:100%;box-sizing:border-box"></div>
   </div>
   <div class="app-box">
     <h3>Fertigation 3 <span style="font-weight:400;font-size:12px;color:#9ca3af">(optional)</span></h3>
@@ -193,6 +197,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
         </select></div>
       <div><label>Rate (lb N/acre)</label><input type="number" id="f3-rate" value="0" min="0" max="150"></div>
     </div>
+    <div style="margin-top:8px"><label>Application Date</label><input type="date" id="f3-date" style="width:100%;box-sizing:border-box"></div>
   </div>
 </div>
 
@@ -207,16 +212,8 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
     <div class="fert-rec" id="fert-rec"></div>
   </div>
 
-<!-- Option B: Season Milestone Timeline -->
-<div class="section" id="viz-timeline">
-  <h2 style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#6b7280;margin-bottom:14px">Option B — Season Milestones</h2>
-  <div id="milestone-view" style="overflow-x:auto;padding-bottom:4px"></div>
-  <div id="app-legend" style="display:none;margin-top:12px;flex-wrap:wrap;gap:10px"></div>
-</div>
-
-<!-- Option C: VT/R1 Gauge -->
 <div class="section" id="viz-gauge">
-  <h2 style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#6b7280;margin-bottom:14px">Option C — VT/R1 Outlook</h2>
+  <h2>VT/R1 Outlook</h2>
   <div id="gauge-view"></div>
   <div id="vt-rec" style="display:none;margin-top:12px;padding:14px 16px;border-radius:10px;border:1px solid #bbf7d0;border-left:5px solid #16a34a;font-size:13px;line-height:1.5"></div>
 </div>
@@ -406,12 +403,16 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus) {
   if(f3R>0)appPool[5]=f3R*lm;
   var stagPool=0;
   var stagedRemVals=STAGES.map(function(s,i){if(appPool[i])stagPool+=appPool[i];return stagPool-demand*s.pct/100;});
+  var today=new Date().toISOString().split('T')[0];
+  function appDate(id){return gv(id)?gv(id).value||null:null;}
+  function fmtDate(d){if(!d)return null;var p=d.split('-');return (parseInt(p[1]))+'/'+parseInt(p[2]);}
+  function isPast(d){return d&&d<=today;}
   var appMarkers=[];
-  if(ppR>0)appMarkers.push({idx:0,raw:ppR,label:'Pre-plant'});
-  if(sdR>0)appMarkers.push({idx:2,raw:sdR,label:'Sidedress'});
-  if(f1R>0)appMarkers.push({idx:3,raw:f1R,label:'Fert 1'});
-  if(f2R>0)appMarkers.push({idx:4,raw:f2R,label:'Fert 2'});
-  if(f3R>0)appMarkers.push({idx:5,raw:f3R,label:'Fert 3'});
+  if(ppR>0)appMarkers.push({idx:0,raw:ppR,label:'Pre-plant',date:appDate('pp-date')});
+  if(sdR>0)appMarkers.push({idx:2,raw:sdR,label:'Sidedress',date:appDate('sd-date')});
+  if(f1R>0)appMarkers.push({idx:3,raw:f1R,label:'Fert 1',date:appDate('f1-date')});
+  if(f2R>0)appMarkers.push({idx:4,raw:f2R,label:'Fert 2',date:appDate('f2-date')});
+  if(f3R>0)appMarkers.push({idx:5,raw:f3R,label:'Fert 3',date:appDate('f3-date')});
 
   _chart={demand:demand,totalAvail:totalAvail,surplus:surplus,stagedRemVals:stagedRemVals,
     appPool:appPool,curIdx:curIdx,vtTarget:vtTarget,appMarkers:appMarkers,
@@ -435,7 +436,6 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus) {
 
 function _updateVisuals(){
   var d=_chart; if(!d)return;
-  _renderTimeline(d);
   _renderGauge(d);
 }
 
@@ -586,6 +586,48 @@ function _renderGauge(d){
     html+='</div></div>';
   } else {
     html+='<div style="font-size:11px;color:#9ca3af;font-style:italic">Loading 50-year weather range…</div>';
+  }
+
+  // Application timeline — shows each app with date if entered
+  var markers=d.appMarkers||[];
+  var datedMarkers=markers.filter(function(m){return m.date;});
+  if(datedMarkers.length){
+    var todayStr=new Date().toISOString().split('T')[0];
+    html+='<div style="margin-top:14px">';
+    html+='<div style="font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">Application Schedule</div>';
+    html+='<div style="display:flex;flex-direction:column;gap:6px">';
+    markers.forEach(function(m,mi){
+      if(!m.date&&!m.raw)return;
+      var past=m.date?m.date<=todayStr:null;
+      var dot=past===true?'#16a34a':past===false?'#9ca3af':'#d1d5db';
+      var textCol=past===true?'#374151':'#9ca3af';
+      var dateStr=m.date?(function(){var p=m.date.split('-');return (parseInt(p[1]))+'/'+parseInt(p[2]);})():'No date';
+      var noDateStyle=!m.date?';font-style:italic':'';
+      html+='<div style="display:flex;align-items:center;gap:10px">';
+      html+='<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:'+(past===true?'#2d6a2d':'#f3f4f6')+';border:2px solid '+(past===true?'#2d6a2d':'#d1d5db')+';flex-shrink:0">';
+      html+='<span style="font-size:10px;font-weight:700;color:'+(past===true?'#fff':'#9ca3af')+'">'+(mi+1)+'</span></div>';
+      html+='<div style="flex:1">';
+      html+='<span style="font-size:13px;font-weight:600;color:'+textCol+noDateStyle+'">'+m.label+'</span>';
+      html+='<span style="font-size:12px;color:#9ca3af;margin-left:6px">+'+m.raw+' lb/ac</span>';
+      html+='</div>';
+      html+='<div style="font-size:12px;font-weight:600;color:'+(past===true?'#16a34a':past===false?'#6b7280':'#d1d5db')+noDateStyle+'">'+dateStr+'</div>';
+      html+='</div>';
+    });
+    html+='</div></div>';
+  } else if(markers.length){
+    html+='<div style="margin-top:14px">';
+    html+='<div style="font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">Application Schedule</div>';
+    html+='<div style="display:flex;flex-direction:column;gap:6px">';
+    markers.forEach(function(m,mi){
+      html+='<div style="display:flex;align-items:center;gap:10px">';
+      html+='<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#2d6a2d;flex-shrink:0">';
+      html+='<span style="font-size:10px;font-weight:700;color:#fff">'+(mi+1)+'</span></div>';
+      html+='<span style="font-size:13px;font-weight:600;color:#374151">'+m.label+'</span>';
+      html+='<span style="font-size:12px;color:#9ca3af">+'+m.raw+' lb/ac</span>';
+      html+='<span style="font-size:11px;color:#d1d5db;font-style:italic;margin-left:auto">add date →</span>';
+      html+='</div>';
+    });
+    html+='</div></div>';
   }
 
   el.innerHTML=html;
