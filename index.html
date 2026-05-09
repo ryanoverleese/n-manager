@@ -228,7 +228,6 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
     <div class="chart-legend">
       <span class="leg-item"><span class="leg-solid"></span> N Remaining</span>
       <span class="leg-item"><span class="leg-dash"></span> Projected to VT</span>
-      <span class="leg-item" id="leg-bands" style="display:none"><span style="display:inline-block;width:20px;height:8px;background:rgba(100,120,150,0.18);border-radius:2px"></span> 50-yr range</span>
     </div>
     <div id="app-legend" style="display:none;margin-top:8px;display:flex;gap:12px;flex-wrap:wrap"></div>
     <div id="weather-status" style="display:none;font-size:11px;color:#9ca3af;margin-top:6px"></div>
@@ -609,26 +608,7 @@ function _render(prog, hover){
     ctx.fillText('VT/R1 min',P.l+cw+3,vtY+3);
   }
 
-  // Historical percentile bands (drawn before clip so they show full width)
-  if(d.bands){
-    var b=d.bands, n2=d.n;
-    function bx(i){return xp(i);} function by(v){return yp(v);}
-    // 10th-90th band (lightest)
-    ctx.beginPath();
-    for(var i=0;i<n2;i++){i===0?ctx.moveTo(bx(i),by(b.p90[i])):ctx.lineTo(bx(i),by(b.p90[i]));}
-    for(var i=n2-1;i>=0;i--){ctx.lineTo(bx(i),by(b.p10[i]));}
-    ctx.closePath(); ctx.fillStyle='rgba(100,120,160,0.09)'; ctx.fill();
-    // 25th-75th band (medium)
-    ctx.beginPath();
-    for(var i=0;i<n2;i++){i===0?ctx.moveTo(bx(i),by(b.p75[i])):ctx.lineTo(bx(i),by(b.p75[i]));}
-    for(var i=n2-1;i>=0;i--){ctx.lineTo(bx(i),by(b.p25[i]));}
-    ctx.closePath(); ctx.fillStyle='rgba(100,120,160,0.14)'; ctx.fill();
-    // 50th percentile median line
-    ctx.beginPath();
-    for(var i=0;i<n2;i++){i===0?ctx.moveTo(bx(i),by(b.p50[i])):ctx.lineTo(bx(i),by(b.p50[i]));}
-    ctx.strokeStyle='rgba(100,120,160,0.5)'; ctx.lineWidth=1.5; ctx.setLineDash([5,3]); ctx.stroke();
-    ctx.setLineDash([]);
-  }
+  // Historical bands intentionally not drawn — data still used for worst-case VT calc
 
   ctx.save();
   ctx.beginPath(); ctx.rect(P.l-1,0,cw*prog+2,H); ctx.clip();
