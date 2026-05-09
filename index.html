@@ -196,21 +196,6 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
   </div>
 </div>
 
-<div class="section">
-  <h2>Loss Factors</h2>
-  <label>Leaching / Over-Irrigation Events</label>
-  <div class="radio-group">
-    <label><input type="radio" name="leach" value="0"> None — 0% N loss</label>
-    <label><input type="radio" name="leach" value="1" checked> 1 event — <span id="leach1-lbl">10%</span> loss</label>
-    <label><input type="radio" name="leach" value="2"> 2+ events — <span id="leach2-lbl">20%</span> loss</label>
-  </div>
-  <div style="margin-top:14px">
-    <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer">
-      <input type="checkbox" id="saturated" style="width:auto">
-      <span>Saturated soils &gt;48 hours — adds <span id="sat-lbl">15%</span> N loss</span>
-    </label>
-  </div>
-</div>
 
 <button class="calc-btn" onclick="calculate()">Calculate N Status</button>
 
@@ -347,11 +332,7 @@ function gv(id) { return document.getElementById(id); }
 function num(id) { return parseFloat(gv(id).value) || 0; }
 
 function updateTextureUI(){
-  var t=TEXTURES[gv('soilTexture').value]||TEXTURES.loam;
-  var l1=gv('leach1-lbl'), l2=gv('leach2-lbl'), ls=gv('sat-lbl');
-  if(l1)l1.textContent=t.leach1Pct+'%';
-  if(l2)l2.textContent=t.leach2Pct+'%';
-  if(ls)ls.textContent=t.satPct+'%';
+  // No manual loss labels to update — losses are model-driven
 }
 
 function calculate() {
@@ -366,8 +347,6 @@ function calculate() {
   var f1 = num('f1-rate');
   var f2 = num('f2-rate');
   var f3 = num('f3-rate');
-  var leach = parseInt(document.querySelector('input[name=leach]:checked').value);
-  var sat = gv('saturated').checked;
   var tex = TEXTURES[gv('soilTexture').value] || TEXTURES.loam;
 
   var nFactor = Math.max(0.5, Math.min(1.4, num('nFactor') || 1.1));
@@ -376,9 +355,8 @@ function calculate() {
   var prevCredit = prevCrop === 'soy' ? 25 : 0;
   var soilResidual = num('soilResidual');
   var appliedN = ppRate + sdRate + f1 + f2 + f3;
-  var leachPct = leach===0 ? 0 : leach===1 ? tex.leach1Pct : tex.leach2Pct;
-  var lossPct = leachPct + (sat ? tex.satPct : 0);
-  if (lossPct > 65) lossPct = 65;
+  // Auto loss: use weather-computed lm if available, otherwise texture median
+  var lossPct = _weatherLossPct !== null ? _weatherLossPct : tex.leach1Pct;
   var losses = appliedN * lossPct / 100;
   var totalAvail = appliedN + omCredit + prevCredit + soilResidual - losses;
   var uptakeToDate = demand * stagePct / 100;
@@ -430,12 +408,13 @@ function calculate() {
 
   gv('results').style.display = 'block';
 
+  _weatherLossPct=null; // reset; weather fetch will update once actual precip loads
   drawChart(demand, totalAvail, stagePct, stageVal, surplus);
   fetchWeatherBands();
   gv('results').scrollIntoView({behavior:'smooth'});
 }
 
-var _chart=null, _raf=null;
+var _chart=null, _raf=null, _weatherLossPct=null;
 
 function _spline(ctx, pts, from, to){
   ctx.moveTo(pts[from].x, pts[from].y);
@@ -470,9 +449,7 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
   var texD=TEXTURES[gv('soilTexture').value]||TEXTURES.loam;
   var omCr=num('om')*20*texD.minMult, prevCr=gv('prevCrop').value==='soy'?25:0;
   var soilRes=num('soilResidual');
-  var leachV=parseInt(document.querySelector('input[name=leach]:checked').value);
-  var leachPctD=leachV===0?0:leachV===1?texD.leach1Pct:texD.leach2Pct;
-  var lossP=Math.min(65,leachPctD+(gv('saturated').checked?texD.satPct:0));
+  var lossP=_weatherLossPct!==null?_weatherLossPct:texD.leach1Pct;
   var lm=1-lossP/100;
   // appPool[stageIdx] = net N added to pool at that stage
   // soilRes has no loss multiplier — already in ground at test time
@@ -568,7 +545,8 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
   if(_raf)cancelAnimationFrame(_raf);
   var lossesInput=Math.round((ppR+sdR+f1R+f2R+f3R)*lossP/100);
   _chart={canvas:canvas,W:W,H:H,P:P,cw:cw,ch:ch,n:n,demand:demand,totalAvail:totalAvail,surplus:surplus,remVals:remVals,stagedRemVals:stagedRemVals,appMarkers:appMarkers,appPool:appPool,curIdx:curIdx,maxY:maxY,minY:minY,span:span,xp:xp,yp:yp,rpts:rpts,vtTarget:vtTarget,lc:lc,lca:lca,ok:ok,dpr:dpr,
-    _sources:{prePlant:Math.round(ppR),sidedress:Math.round(sdR),fert1:Math.round(f1R),fert2:Math.round(f2R),fert3:Math.round(f3R),mineralization:Math.round(omCr),prevCrop:Math.round(prevCr),soilResidual:Math.round(soilRes),inputLosses:lossesInput}};
+    _sources:{prePlant:Math.round(ppR),sidedress:Math.round(sdR),fert1:Math.round(f1R),fert2:Math.round(f2R),fert3:Math.round(f3R),mineralization:Math.round(omCr),prevCrop:Math.round(prevCr),soilResidual:Math.round(soilRes),inputLosses:lossesInput},
+    _rawRates:{pp:ppR,sd:sdR,f1:f1R,f2:f2R,f3:f3R,omCr:omCr,prevCr:prevCr,soilRes:soilRes},_texD:texD};
 
   var startTs=null, dur=1100;
   _raf=requestAnimationFrame(function step(ts){
@@ -949,6 +927,26 @@ async function fetchWeatherBands(){
         // Simulate current-season N losses from actual precip
         var curSim=_simYear(_chart.demand,_chart.totalAvail,cpPrecipMm,tex);
         var cm=curSim._meta;
+
+        // Update main N-remaining line with actual weather-computed losses
+        if(cm&&_chart._rawRates&&_chart.totalAvail>0){
+          var wLossPct=Math.min(65,(cm.leachLoss+cm.denitrLoss)/_chart.totalAvail*100);
+          _weatherLossPct=wLossPct;
+          var wlm=1-wLossPct/100;
+          var rr=_chart._rawRates;
+          var wPool={0:(rr.pp+rr.omCr+rr.prevCr)*wlm+rr.soilRes};
+          if(rr.sd>0)wPool[2]=rr.sd*wlm;
+          if(rr.f1>0)wPool[3]=rr.f1*wlm;
+          if(rr.f2>0)wPool[4]=rr.f2*wlm;
+          if(rr.f3>0)wPool[5]=rr.f3*wlm;
+          var wStagPool=0;
+          _chart.stagedRemVals=STAGES.map(function(s,si){
+            if(wPool[si]!==undefined)wStagPool+=wPool[si];
+            return wStagPool-_chart.demand*s.pct/100;
+          });
+          _chart.appPool=wPool;
+          _chart.rpts=STAGES.map(function(s,si){return{x:_chart.xp(si),y:_chart.yp(_chart.stagedRemVals[si])};});
+        }
         var lossEl=gv('n-loss-breakdown');
         if(lossEl&&cm&&_chart._sources){
           var s=_chart._sources;
