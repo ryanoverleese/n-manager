@@ -999,25 +999,17 @@ async function fetchWeatherBands(){
             for(var s2=0;s2<_STAGE_DAYS_SIM.length;s2++){if(dayN<=_STAGE_DAYS_SIM[s2]){stageForDay=s2;break;}}
             if(stageForDay>_chart.curIdx) stagePrecip[stageForDay]+=(fcPrecipMm[fi]||0)/25.4;
           }
-          // Run simulation on actual past + forecast future to get adjusted prediction line
+          // Compute forecast impact as delta: (with forecast) - (without forecast)
+          // This preserves staged applications while correctly bending the line for rain
+          var pastOnlySim=_simYear(_chart.demand,_chart.totalAvail,cpPrecipMm,tex);
           var combinedPrecipMm=cpPrecipMm.concat(fcPrecipMm);
           var fcSim=_simYear(_chart.demand,_chart.totalAvail,combinedPrecipMm,tex);
-          // Update prediction portion of N-remaining line (future stages only)
-          var rr2=_chart._rawRates;
-          if(rr2){
-            var wlm2=1-(_weatherLossPct||tex.leach1Pct)/100;
-            var wPool2=_chart.appPool;
-            var wStagPool2=0;
-            var updatedVals=STAGES.map(function(st,si){
-              if(wPool2[si]!==undefined)wStagPool2+=wPool2[si];
-              if(si<=_chart.curIdx) return _chart.stagedRemVals[si];
-              // For future stages use forecast-adjusted simulation delta
-              var baseLoss=_chart.totalAvail-fcSim[si];
-              return Math.max(-50,_chart.totalAvail-baseLoss-_chart.demand*st.pct/100);
-            });
-            _chart.stagedRemVals=updatedVals;
-            _chart.rpts=STAGES.map(function(st,si){return{x:_chart.xp(si),y:_chart.yp(_chart.stagedRemVals[si])};});
-          }
+          _chart.stagedRemVals=STAGES.map(function(st,si){
+            if(si<=_chart.curIdx) return _chart.stagedRemVals[si];
+            var forecastDelta=fcSim[si]-pastOnlySim[si]; // negative = more loss from forecast rain
+            return _chart.stagedRemVals[si]+forecastDelta;
+          });
+          _chart.rpts=STAGES.map(function(st,si){return{x:_chart.xp(si),y:_chart.yp(_chart.stagedRemVals[si])};});
         }
       }catch(e3){/* forecast unavailable — prediction uses texture default */}
     }catch(e2){/* silently skip current-season precip if unavailable */}
