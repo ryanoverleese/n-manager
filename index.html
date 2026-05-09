@@ -227,7 +227,16 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
     <canvas id="curve" height="340"></canvas>
     <div class="chart-legend">
       <span class="leg-item"><span class="leg-solid"></span> N Remaining</span>
-      <span class="leg-item" id="leg-bands" style="display:none"><span style="display:inline-block;width:20px;height:8px;background:rgba(100,120,150,0.18);border-radius:2px"></span> 50-yr range</span>
+      <span class="leg-item" id="leg-bands" style="display:none">
+        <span style="display:inline-flex;gap:4px;align-items:center">
+          <span style="display:inline-block;width:14px;height:8px;background:rgba(100,120,160,0.28);border-radius:2px"></span>
+          <span style="font-size:10px;color:#9ca3af">50yr</span>
+          <span style="display:inline-block;width:14px;height:8px;background:rgba(80,140,170,0.35);border-radius:2px"></span>
+          <span style="font-size:10px;color:#9ca3af">25yr</span>
+          <span style="display:inline-block;width:14px;height:8px;background:rgba(60,160,140,0.45);border-radius:2px"></span>
+          <span style="font-size:10px;color:#9ca3af">10yr</span>
+        </span>
+      </span>
     </div>
     <div id="app-legend" style="display:none;margin-top:8px;display:flex;gap:12px;flex-wrap:wrap"></div>
     <div id="weather-status" style="display:none;font-size:11px;color:#9ca3af;margin-top:6px"></div>
@@ -609,18 +618,24 @@ function _render(prog, hover){
   }
 
   // Historical percentile bands — future only (from Now forward), clipped to chart area
+  // 50yr = outermost/lightest, 25yr = middle, 10yr = innermost/darkest
   if(d.bands){
     ctx.save();
     ctx.beginPath(); ctx.rect(P.l,P.t,cw,ch); ctx.clip();
-    var b=d.bands, n2=d.n, ci=d.curIdx;
-    ctx.beginPath();
-    for(var i=ci;i<n2;i++){i===ci?ctx.moveTo(xp(i),yp(b.p90[i])):ctx.lineTo(xp(i),yp(b.p90[i]));}
-    for(var i=n2-1;i>=ci;i--){ctx.lineTo(xp(i),yp(b.p10[i]));}
-    ctx.closePath(); ctx.fillStyle='rgba(100,120,160,0.09)'; ctx.fill();
-    ctx.beginPath();
-    for(var i=ci;i<n2;i++){i===ci?ctx.moveTo(xp(i),yp(b.p75[i])):ctx.lineTo(xp(i),yp(b.p75[i]));}
-    for(var i=n2-1;i>=ci;i--){ctx.lineTo(xp(i),yp(b.p25[i]));}
-    ctx.closePath(); ctx.fillStyle='rgba(100,120,160,0.14)'; ctx.fill();
+    var n2=d.n, ci=d.curIdx;
+    function _drawBand(b, fillOuter, fillInner){
+      ctx.beginPath();
+      for(var i=ci;i<n2;i++){i===ci?ctx.moveTo(xp(i),yp(b.p90[i])):ctx.lineTo(xp(i),yp(b.p90[i]));}
+      for(var i=n2-1;i>=ci;i--){ctx.lineTo(xp(i),yp(b.p10[i]));}
+      ctx.closePath(); ctx.fillStyle=fillOuter; ctx.fill();
+      ctx.beginPath();
+      for(var i=ci;i<n2;i++){i===ci?ctx.moveTo(xp(i),yp(b.p75[i])):ctx.lineTo(xp(i),yp(b.p75[i]));}
+      for(var i=n2-1;i>=ci;i--){ctx.lineTo(xp(i),yp(b.p25[i]));}
+      ctx.closePath(); ctx.fillStyle=fillInner; ctx.fill();
+    }
+    _drawBand(d.bands,   'rgba(100,120,160,0.07)', 'rgba(100,120,160,0.10)'); // 50yr
+    if(d.bands25) _drawBand(d.bands25, 'rgba(80,140,170,0.09)', 'rgba(80,140,170,0.13)'); // 25yr
+    if(d.bands10) _drawBand(d.bands10, 'rgba(60,160,140,0.11)', 'rgba(60,160,140,0.17)'); // 10yr
     ctx.restore();
   }
 
@@ -888,26 +903,32 @@ async function fetchWeatherBands(){
     // Simulate each year
     var demand=_chart.demand, totalAvail=_chart.totalAvail;
     var tex=TEXTURES[gv('soilTexture').value]||TEXTURES.loam;
-    var allRem=[], yearRows=[];
+    var yearRows=[];
     for(var yr in yearPrecip){
       if(yearPrecip[yr].length>=100){
         var sim=_simYear(demand,totalAvail,yearPrecip[yr],tex);
-        allRem.push(sim);
         yearRows.push({year:parseInt(yr), sim:sim, meta:sim._meta});
       }
     }
-    if(allRem.length<10)throw new Error('Not enough data');
+    if(yearRows.length<10)throw new Error('Not enough data');
 
-    // Compute percentiles at each stage
-    var bands={p10:[],p25:[],p50:[],p75:[],p90:[]};
-    for(var s=0;s<STAGES.length;s++){
-      var vals=allRem.map(function(y){return y[s];});
-      bands.p10.push(_pctile(vals,0.10));
-      bands.p25.push(_pctile(vals,0.25));
-      bands.p50.push(_pctile(vals,0.50));
-      bands.p75.push(_pctile(vals,0.75));
-      bands.p90.push(_pctile(vals,0.90));
+    // Sort most-recent first, then slice into 10/25/50-yr windows
+    yearRows.sort(function(a,b){return b.year-a.year;});
+    var allRem=yearRows.map(function(r){return r.sim;});
+    function _mkBands(rows){
+      var bd={p10:[],p25:[],p50:[],p75:[],p90:[]};
+      for(var s=0;s<STAGES.length;s++){
+        var vals=rows.map(function(r){return r.sim[s];});
+        bd.p10.push(_pctile(vals,0.10)); bd.p25.push(_pctile(vals,0.25));
+        bd.p50.push(_pctile(vals,0.50)); bd.p75.push(_pctile(vals,0.75));
+        bd.p90.push(_pctile(vals,0.90));
+      }
+      return bd;
     }
+    var bands50=_mkBands(yearRows);
+    var bands25=_mkBands(yearRows.slice(0,Math.min(25,yearRows.length)));
+    var bands10=_mkBands(yearRows.slice(0,Math.min(10,yearRows.length)));
+    var bands=bands50; // legacy reference for tooltip/stress
 
     // Current season actual precip — fetch from planting date to today
     var today=new Date().toISOString().split('T')[0];
@@ -966,7 +987,7 @@ async function fetchWeatherBands(){
       }
     }catch(e2){/* silently skip current-season precip if unavailable */}
 
-    _chart.bands=bands;
+    _chart.bands=bands50; _chart.bands25=bands25; _chart.bands10=bands10;
     _chart.stagePrecip=stagePrecip;
     _chart.yearRows=yearRows;
     _chart.curIdx2=_chart.curIdx;
