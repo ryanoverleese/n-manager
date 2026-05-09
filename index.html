@@ -252,6 +252,7 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
         </div>
       </div>
     </div>
+    <div id="vt-rec" style="display:none;margin-top:12px;padding:14px 16px;border-radius:10px;border:1px solid #bbf7d0;border-left:5px solid #16a34a;font-size:13px;line-height:1.5"></div>
     <div id="n-loss-breakdown" style="display:none;margin-top:10px;padding:10px 12px;background:#fafafa;border-radius:8px;border:1px solid #e5e7eb"></div>
     <div style="margin-top:6px">
       <button onclick="var d=gv('how-calc');d.style.display=d.style.display==='none'?'block':'none';this.textContent=d.style.display==='none'?'▸ How is this calculated?':'▾ How is this calculated?'" style="background:none;border:none;color:#6b7280;font-size:11px;cursor:pointer;padding:2px 0">▸ How is this calculated?</button>
@@ -514,6 +515,40 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus){
     vtoEl.style.borderColor=vtSurp>=0?'#bbf7d0':'#fecaca';
     vtoEl.style.borderLeftColor=vtSurp>=0?'#16a34a':'#dc2626';
     vtoEl.style.background=vtSurp>=0?'#f0fdf4':'#fff5f5';
+  }
+
+  // N Application Recommendation
+  var recEl=gv('vt-rec');
+  if(recEl){
+    recEl.style.display='block';
+    var futureApps=appMarkers.filter(function(m){return m.idx>curIdx&&m.idx<=5;});
+    var pastApps=appMarkers.filter(function(m){return m.idx<=curIdx;});
+    var hdr='<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Next Step</div>';
+    if(vtSurp<0){
+      var deficit=Math.abs(vtSurp);
+      var body='';
+      if(futureApps.length>0){
+        var addPerPass=Math.ceil(deficit/futureApps.length);
+        body='You\'re projected <strong>'+deficit+' lb/ac short</strong> at VT — even with your planned applications.'
+          +' With <strong>'+futureApps.length+' fertigation pass'+(futureApps.length>1?'es':'')+' remaining</strong>,'
+          +' increase each by <strong>~'+addPerPass+' lb N/ac</strong> to close the gap.';
+      } else {
+        body='You\'re projected <strong>'+deficit+' lb/ac short</strong> at VT with <strong>no fertigation passes remaining</strong>.'
+          +' An emergency application of <strong>'+deficit+' lb N/ac</strong> before VT is strongly recommended.';
+      }
+      recEl.style.background='#fff5f5'; recEl.style.borderColor='#fecaca'; recEl.style.borderLeftColor='#dc2626'; recEl.style.color='#7f1d1d';
+      recEl.innerHTML=hdr+body;
+    } else if(vtSurp<25){
+      var trimMsg='';
+      if(futureApps.length>0){var tp=Math.floor(vtSurp/futureApps.length); if(tp>3)trimMsg=' You could trim ~'+tp+' lb/ac from each remaining pass and still hit the minimum.';}
+      recEl.style.background='#fffbeb'; recEl.style.borderColor='#fde68a'; recEl.style.borderLeftColor='#f59e0b'; recEl.style.color='#78350f';
+      recEl.innerHTML=hdr+'On track but tight — projected <strong>+'+vtSurp+' lb/ac</strong> above the VT minimum.'+trimMsg;
+    } else {
+      var trimMsg2='';
+      if(futureApps.length>0){var tp2=Math.floor(vtSurp/futureApps.length); if(tp2>5)trimMsg2=' To optimize cost, consider trimming <strong>~'+tp2+' lb N/ac</strong> from each of your '+futureApps.length+' remaining pass'+(futureApps.length>1?'es':'')+'.';}
+      recEl.style.background='#f0fdf4'; recEl.style.borderColor='#bbf7d0'; recEl.style.borderLeftColor='#16a34a'; recEl.style.color='#14532d';
+      recEl.innerHTML=hdr+'On track — projected <strong>+'+vtSurp+' lb/ac</strong> above the VT minimum.'+trimMsg2;
+    }
   }
 
   if(_raf)cancelAnimationFrame(_raf);
