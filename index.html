@@ -1086,18 +1086,8 @@ function lookupSoil(lat,lng){
   chip.style.display='block';
   chip.style.background='#f0f9ff'; chip.style.borderColor='#bae6fd'; chip.style.color='#0369a1';
   chip.textContent='Looking up soil data…';
-  var sql='SELECT TOP 1 co.compname, co.hydgrp, co.drainagecl, ch.om_r, ch.texture '
-    +'FROM mapunit mu '
-    +'INNER JOIN component co ON mu.mukey=co.mukey '
-    +'INNER JOIN chorizon ch ON co.cokey=ch.cokey '
-    +'WHERE mu.mukey IN (SELECT mukey FROM SDA_Get_Mukey_from_intersection_with_WktWgs84('
-    +"'point("+lng.toFixed(5)+' '+lat.toFixed(5)+")'))"
-    +' AND co.majcompflag=\'Yes\' AND ch.hzdept_r=0 ORDER BY co.comppct_r DESC';
-  fetch('https://SDMDataAccess.sc.egov.usda.gov/Tabular/SDMTabularService/post.rest',{
-    method:'POST',
-    headers:{'Content-Type':'application/x-www-form-urlencoded'},
-    body:'query='+encodeURIComponent(sql)+'&format=JSON'
-  }).then(function(r){return r.json();}).then(function(data){
+  fetch('/.netlify/functions/soil-lookup?lat='+lat.toFixed(5)+'&lng='+lng.toFixed(5))
+  .then(function(r){return r.json();}).then(function(data){
     if(!data.Table||!data.Table.length){
       chip.style.background='#fff5f5'; chip.style.borderColor='#fecaca'; chip.style.color='#dc2626';
       chip.textContent='No soil data found for this location.'; return;
