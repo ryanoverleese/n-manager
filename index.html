@@ -199,6 +199,19 @@ footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
     </div>
     <div style="margin-top:8px"><label>Application Date</label><input type="date" id="f3-date" style="width:100%;box-sizing:border-box"></div>
   </div>
+  <div class="app-box" style="border-color:#f59e0b;background:#fffbeb">
+    <h3 style="color:#92400e">Post-VT <span style="font-weight:400;font-size:12px;color:#b45309">(R1–R3, reduced efficiency)</span></h3>
+    <div class="row2">
+      <div><label>Product</label>
+        <select id="pvt-prod">
+          <option selected>UAN 28%</option><option>UAN 32%</option>
+          <option>AMS (21% N)</option><option>Urea (46% N)</option><option>Other</option>
+        </select></div>
+      <div><label>Rate (lb N/acre)</label><input type="number" id="pvt-rate" value="0" min="0" max="60"></div>
+    </div>
+    <div style="margin-top:8px"><label>Application Date</label><input type="date" id="pvt-date" style="width:100%;box-sizing:border-box"></div>
+    <div style="margin-top:6px;font-size:11px;color:#92400e">⚠ Post-VT N is applied at ~50% efficiency — crop uptake capacity is limited after tassel. Grain protein benefit only.</div>
+  </div>
 </div>
 
 
@@ -390,7 +403,7 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus) {
   var curIdx=0;
   for(var i=0;i<n;i++){if(STAGES[i].v===stageVal){curIdx=i;break;}}
   var vtTarget=demand*0.43;
-  var ppR=num('pp-rate'),sdR=num('sd-rate'),f1R=num('f1-rate'),f2R=num('f2-rate'),f3R=num('f3-rate');
+  var ppR=num('pp-rate'),sdR=num('sd-rate'),f1R=num('f1-rate'),f2R=num('f2-rate'),f3R=num('f3-rate'),pvtR=num('pvt-rate');
   var texD=TEXTURES[gv('soilTexture').value]||TEXTURES.loam;
   var omCr=num('om')*20*texD.minMult, prevCr=gv('prevCrop').value==='soy'?25:0;
   var soilRes=num('soilResidual');
@@ -401,6 +414,8 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus) {
   if(f1R>0)appPool[3]=f1R*lm;
   if(f2R>0)appPool[4]=f2R*lm;
   if(f3R>0)appPool[5]=f3R*lm;
+  // Post-VT at ~50% efficiency (stage 7 = R2)
+  if(pvtR>0)appPool[7]=pvtR*lm*0.5;
   var stagPool=0;
   var stagedRemVals=STAGES.map(function(s,i){if(appPool[i])stagPool+=appPool[i];return stagPool-demand*s.pct/100;});
   var today=new Date().toISOString().split('T')[0];
@@ -413,6 +428,7 @@ function drawChart(demand, totalAvail, stagePct, stageVal, surplus) {
   if(f1R>0)appMarkers.push({idx:3,raw:f1R,label:'Fert 1',date:appDate('f1-date')});
   if(f2R>0)appMarkers.push({idx:4,raw:f2R,label:'Fert 2',date:appDate('f2-date')});
   if(f3R>0)appMarkers.push({idx:5,raw:f3R,label:'Fert 3',date:appDate('f3-date')});
+  if(pvtR>0)appMarkers.push({idx:7,raw:pvtR,label:'Post-VT',date:appDate('pvt-date'),postVT:true});
 
   _chart={demand:demand,totalAvail:totalAvail,surplus:surplus,stagedRemVals:stagedRemVals,
     appPool:appPool,curIdx:curIdx,vtTarget:vtTarget,appMarkers:appMarkers,
@@ -523,7 +539,25 @@ function _renderGauge(d){
   var surpBg=vtSurplus>=0?'#f0fdf4':'#fff5f5';
   var surpBorder=vtSurplus>=0?'#bbf7d0':'#fecaca';
 
+  var vtDate=d._vtDate||null, vtDaysOut=d._vtDaysOut||null, accumGDU=d._accumGDU||null;
   var html='';
+
+  // VT date prediction banner (if we have it)
+  if(vtDate&&vtDate!=='reached'){
+    html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;margin-bottom:12px">';
+    html+='<div style="font-size:22px">🌽</div>';
+    html+='<div>';
+    html+='<div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.05em">VT Predicted</div>';
+    html+='<div style="font-size:18px;font-weight:800;color:#78350f">'+vtDate+(vtDaysOut?' <span style="font-size:12px;font-weight:500;color:#b45309">('+vtDaysOut+' days)</span>':'')+'</div>';
+    if(accumGDU!==null) html+='<div style="font-size:10px;color:#b45309">'+accumGDU+' GDU accumulated · 1,300 needed</div>';
+    html+='</div></div>';
+  } else if(vtDate==='reached'){
+    html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;margin-bottom:12px">';
+    html+='<div style="font-size:22px">🌽</div>';
+    html+='<div><div style="font-size:11px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.05em">VT Reached</div>';
+    if(accumGDU!==null) html+='<div style="font-size:10px;color:#16a34a">'+accumGDU+' GDU — at or past tassel</div>';
+    html+='</div></div>';
+  }
 
   // Stat row
   html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">';
@@ -771,10 +805,11 @@ async function fetchWeatherBands(){
     var curPlantDate=new Date().getFullYear()+'-'+plantMD;
     var stagePrecip=new Array(STAGES.length).fill(0);
     try{
-      var cpRes=await fetch('https://archive-api.open-meteo.com/v1/archive?latitude='+lat+'&longitude='+lon+'&start_date='+curPlantDate+'&end_date='+today+'&daily=precipitation_sum&timezone=auto');
+      var cpRes=await fetch('https://archive-api.open-meteo.com/v1/archive?latitude='+lat+'&longitude='+lon+'&start_date='+curPlantDate+'&end_date='+today+'&daily=precipitation_sum,temperature_2m_max,temperature_2m_min&timezone=auto');
       var cpData=await cpRes.json();
       if(cpData.daily&&cpData.daily.time){
         var cpTimes=cpData.daily.time, cpPrecip=cpData.daily.precipitation_sum;
+        var cpTmax=cpData.daily.temperature_2m_max||[], cpTmin=cpData.daily.temperature_2m_min||[];
         var cpPrecipMm=cpPrecip.map(function(v){return v||0;});
         for(var i=0;i<cpTimes.length;i++){
           var dayN=i;
@@ -840,13 +875,57 @@ async function fetchWeatherBands(){
             +'</table>';
         }
       }
+      // Accumulate GDUs from planting to today
+      function gduDay(maxC,minC){
+        var maxF=Math.min(86,maxC*9/5+32), minF=Math.max(50,minC*9/5+32);
+        return Math.max(0,(maxF+minF)/2-50);
+      }
+      var accumGDU=0;
+      for(var gi=0;gi<cpTmax.length;gi++) accumGDU+=gduDay(cpTmax[gi]||0,cpTmin[gi]||0);
+      _chart._accumGDU=Math.round(accumGDU);
+
       // 14-day forecast — extend precip array forward and bend the prediction line
       try{
-        var fcRes=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lon+'&daily=precipitation_sum&timezone=auto&forecast_days=14');
+        var fcRes=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lon+'&daily=precipitation_sum,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=14');
         var fcData=await fcRes.json();
         if(fcData.daily&&fcData.daily.time){
           var fcPrecip=fcData.daily.precipitation_sum||[];
           var fcPrecipMm=fcPrecip.map(function(v){return v||0;});
+          // Project VT date using accumulated GDUs + forecast temps
+          var VT_THRESHOLD=1300; // ~110 CRM Nebraska corn, base 50°F
+          var fcTmax=fcData.daily.temperature_2m_max||[], fcTmin=fcData.daily.temperature_2m_min||[];
+          var gduLeft=VT_THRESHOLD-(accumGDU||0);
+          var vtDate=null, vtDaysOut=null;
+          if(gduLeft<=0){
+            vtDate='reached'; // already at/past VT
+          } else {
+            var fcAvgGDU=0, fcDays=0;
+            for(var gi2=0;gi2<fcTmax.length;gi2++){
+              var dGDU=gduDay(fcTmax[gi2]||0,fcTmin[gi2]||0);
+              fcAvgGDU+=dGDU; fcDays++;
+              gduLeft-=dGDU;
+              if(gduLeft<=0){
+                var vtD=new Date(fcData.daily.time[gi2]);
+                vtDate=(vtD.getMonth()+1)+'/'+(vtD.getDate());
+                vtDaysOut=gi2+1;
+                break;
+              }
+            }
+            if(!vtDate&&fcDays>0){
+              // Forecast window not long enough — extrapolate using avg GDU/day
+              var avgPerDay=fcAvgGDU/Math.max(1,fcDays);
+              if(avgPerDay>0){
+                var extraDays=Math.ceil(gduLeft/avgPerDay);
+                var extDate=new Date();
+                extDate.setDate(extDate.getDate()+fcDays+extraDays);
+                vtDate='~'+(extDate.getMonth()+1)+'/'+(extDate.getDate());
+                vtDaysOut=fcDays+extraDays;
+              }
+            }
+          }
+          _chart._vtDate=vtDate;
+          _chart._vtDaysOut=vtDaysOut;
+          _chart._accumGDU=Math.round(accumGDU||0);
           // Map forecast days to stages (day 0 of forecast = day after today)
           var daysIntoSeason=cpPrecipMm.length; // days from planting to today
           for(var fi=0;fi<fcPrecipMm.length;fi++){
