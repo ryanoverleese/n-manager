@@ -1103,12 +1103,41 @@ function initFieldMap(){
     .setView([41.5,-99.5],6);
   L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',{maxZoom:20}).addTo(map);
   var marker=null;
-  map.on('click',function(e){
+
+  function placePin(latlng){
     if(marker)map.removeLayer(marker);
-    marker=L.marker(e.latlng).addTo(map);
-    _fieldLatLng={lat:e.latlng.lat,lng:e.latlng.lng};
-    lookupSoil(e.latlng.lat,e.latlng.lng);
-  });
+    marker=L.marker(latlng).addTo(map);
+    _fieldLatLng={lat:latlng.lat,lng:latlng.lng};
+    lookupSoil(latlng.lat,latlng.lng);
+  }
+
+  map.on('click',function(e){ placePin(e.latlng); });
+
+  // Locate Me button
+  var btn=L.control({position:'topright'});
+  btn.onAdd=function(){
+    var d=L.DomUtil.create('button','');
+    d.innerHTML='&#9654; Locate Me';
+    d.style.cssText='background:#fff;border:1.5px solid #d1d5db;border-radius:6px;padding:6px 10px;font-size:13px;font-weight:600;color:#374151;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.15)';
+    L.DomEvent.on(d,'click',function(e){
+      L.DomEvent.stopPropagation(e);
+      d.textContent='Locating…';
+      d.disabled=true;
+      navigator.geolocation.getCurrentPosition(function(pos){
+        var ll=L.latLng(pos.coords.latitude,pos.coords.longitude);
+        map.setView(ll,15);
+        placePin(ll);
+        d.innerHTML='&#9654; Locate Me';
+        d.disabled=false;
+      },function(){
+        d.innerHTML='&#9654; Locate Me';
+        d.disabled=false;
+        alert('Location unavailable. Tap your field on the map.');
+      },{timeout:8000});
+    });
+    return d;
+  };
+  btn.addTo(map);
 }
 
 function hsgToTex(hydgrp){
