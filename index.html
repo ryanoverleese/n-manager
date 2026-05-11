@@ -731,32 +731,11 @@ footer a{color:var(--t3);text-decoration:none}
 <footer>Acre Insights &nbsp;·&nbsp; <a href="mailto:ryan@acreinsights.com">ryan@acreinsights.com</a></footer>
 
 <script>
-// ── LOCAL FIELD STORAGE ───────────────────────────
-// Fields stored in localStorage — no auth required.
-// Run history logged to Supabase in the background when available.
-var LS_KEY = 'nm_fields_v1';
-
-function lsGetFields(){
-  try{ return JSON.parse(localStorage.getItem(LS_KEY)||'[]'); }catch(e){ return []; }
-}
-function lsSaveFields(arr){
-  try{ localStorage.setItem(LS_KEY, JSON.stringify(arr)); }catch(e){ console.warn('ls save failed',e); }
-}
-function lsGetField(id){
-  return lsGetFields().find(function(f){ return f.id===id; }) || null;
-}
-function lsUpsertField(field){
-  var arr = lsGetFields();
-  var idx = arr.findIndex(function(f){ return f.id===field.id; });
-  if(idx>=0) arr[idx]=field; else arr.unshift(field);
-  lsSaveFields(arr);
-}
-function lsDeleteField(id){
-  lsSaveFields(lsGetFields().filter(function(f){ return f.id!==id; }));
-}
-function lsNewId(){
-  return 'f'+(Date.now().toString(36))+(Math.random().toString(36).slice(2,6));
-}
+// ── SUPABASE ──────────────────────────────────────
+var SB_URL = 'https://cpmogpbqzlmesxwjjxns.supabase.co';
+var SB_KEY = 'sb_publishable_PwKrpiIL2A83CfKIY14W_Q_Sdz84SSB';
+var sb = null;
+var sbUser = null;
 
 function fbStatus(msg, color){
   var el = gv('fb-status');
@@ -764,11 +743,74 @@ function fbStatus(msg, color){
   el.style.color = color || 'var(--t3)';
   el.style.display = msg ? 'block' : 'none';
 }
-// alias for legacy calls
 function sbStatus(msg, color){ fbStatus(msg, color); }
 
+function initSupabase(){
+  if(!window.supabase){ console.warn('Supabase SDK not loaded'); return; }
+  sb = window.supabase.createClient(SB_URL, SB_KEY, {
+    auth:{persistSession:true, autoRefreshToken:true, storageKey:'nm_auth'}
+  });
+  sb.auth.getSession().then(function(res){
+    if(res.data && res.data.session){
+      sbUser = res.data.session.user;
+      loadFields();
+    } else {
+      sb.auth.signInAnonymously().then(function(res2){
+        if(res2.data && res2.data.user){
+          sbUser = res2.data.user;
+          migrateLocalFields();
+          loadFields();
+        } else {
+          console.warn('anon sign-in failed', res2.error);
+          loadFieldsLocal();
+        }
+      });
+    }
+  });
+}
+
+// ── LOCAL FALLBACK ────────────────────────────────
+var LS_KEY = 'nm_fields_v1';
+function lsGetFields(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||'[]'); }catch(e){ return []; } }
+function lsSave(arr){ try{ localStorage.setItem(LS_KEY,JSON.stringify(arr)); }catch(e){} }
+
+// Migrate any fields created while offline → Supabase, then clear local copy
+function migrateLocalFields(){
+  var local = lsGetFields();
+  if(!local.length || !sb || !sbUser) return;
+  var rows = local.map(function(f){
+    return {
+      user_id:sbUser.id, name:f.name, county:f.county||'',
+      texture:f.texture||'medium', om:f.om||2.5, yield_goal:f.yield_goal||200,
+      prev_crop:f.prev_crop||'corn', residual_n:f.residual_n||0,
+      planting_date:f.planting_date||null,
+      updated_at:new Date().toISOString()
+    };
+  });
+  sb.from('nm_fields').insert(rows).then(function(res){
+    if(!res.error){
+      localStorage.removeItem(LS_KEY);
+      console.log('migrated', rows.length, 'local fields to Supabase');
+    }
+  });
+}
+
 function loadFields(){
-  var fields = lsGetFields();
+  if(sbUser){
+    sb.from('nm_fields').select('id,name,county').order('updated_at',{ascending:false}).then(function(res){
+      if(res.error){ console.error('loadFields',res.error); return; }
+      renderFieldOptions(res.data||[]);
+    });
+  } else {
+    loadFieldsLocal();
+  }
+}
+
+function loadFieldsLocal(){
+  renderFieldOptions(lsGetFields());
+}
+
+function renderFieldOptions(fields){
   function buildOptions(sel, emptyLabel){
     var cur = sel.value;
     sel.innerHTML = '<option value="">'+emptyLabel+'</option>';
@@ -784,20 +826,6 @@ function loadFields(){
   gv('load-field-btn').disabled = !gv('field-select').value;
   var editSel = gv('field-select-edit');
   if(editSel) buildOptions(editSel, 'Switch field…');
-}
-
-// ── SUPABASE (run history only, best-effort) ──────
-var SB_URL = 'https://cpmogpbqzlmesxwjjxns.supabase.co';
-var SB_KEY = 'sb_publishable_PwKrpiIL2A83CfKIY14W_Q_Sdz84SSB';
-var sb = null;
-
-function initSupabase(){
-  if(!window.supabase) return;
-  try{
-    sb = window.supabase.createClient(SB_URL, SB_KEY, {
-      auth:{persistSession:true,autoRefreshToken:true,storageKey:'nm_auth'}
-    });
-  }catch(e){ sb = null; }
 }
 
 // ── FIELD STATE ───────────────────────────────────
@@ -848,33 +876,33 @@ function createField(){
   var nm = (gv('fb-name-input').value||'').trim();
   if(!nm){ gv('fb-name-input').focus(); return; }
   var county = (gv('fb-county-input').value||'').trim();
-  var field = {
-    id:         lsNewId(),
-    name:       nm,
-    county:     county,
-    texture:    'medium',
-    om:         2.5,
-    yield_goal: 200,
-    prev_crop:  'corn',
-    residual_n: 0,
-    planting_date: '',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  };
-  lsUpsertField(field);
-  // Reset form to defaults
-  gv('yieldGoal').value  = '200';
-  gv('om').value         = '2.5';
-  gv('texture').value    = 'medium';
-  gv('prevCrop').value   = 'corn';
-  gv('residualN').value  = '0';
-  gv('plantDate').value  = '';
-  gv('results').style.display = 'none';
-  setActiveField(field.id, nm);
-  loadFields();
-  fbStatus('Field created — fill in the details below','var(--ok)');
-  setTimeout(function(){ fbStatus(''); }, 4000);
-  gv('yieldGoal').scrollIntoView({behavior:'smooth', block:'center'});
+  var defaults = {texture:'medium',om:2.5,yield_goal:200,prev_crop:'corn',residual_n:0,planting_date:null};
+
+  function onCreated(id){
+    gv('yieldGoal').value='200'; gv('om').value='2.5'; gv('texture').value='medium';
+    gv('prevCrop').value='corn'; gv('residualN').value='0'; gv('plantDate').value='';
+    gv('results').style.display='none';
+    setActiveField(id, nm);
+    loadFields();
+    fbStatus('Field created — fill in the details below','var(--ok)');
+    setTimeout(function(){ fbStatus(''); }, 4000);
+    gv('yieldGoal').scrollIntoView({behavior:'smooth', block:'center'});
+  }
+
+  if(sbUser){
+    var payload = Object.assign({user_id:sbUser.id, name:nm, county:county, updated_at:new Date().toISOString()}, defaults);
+    sb.from('nm_fields').insert(payload).select('id').single().then(function(res){
+      if(res.error){ fbStatus('Could not create: '+res.error.message,'var(--bad)'); return; }
+      onCreated(res.data.id);
+    });
+  } else {
+    // localStorage fallback
+    var id = 'f'+(Date.now().toString(36))+(Math.random().toString(36).slice(2,5));
+    var arr = lsGetFields();
+    arr.unshift(Object.assign({id:id, name:nm, county:county, created_at:new Date().toISOString(), updated_at:new Date().toISOString()}, defaults));
+    lsSave(arr);
+    onCreated(id);
+  }
 }
 
 function onFieldSelect(){
@@ -894,38 +922,57 @@ function switchField(id){
 }
 
 function applyField(id){
-  var f = lsGetField(id);
-  if(!f){ fbStatus('Field not found','var(--bad)'); return; }
-  gv('texture').value   = f.texture || 'medium';
-  gv('om').value        = f.om != null ? f.om : 2.5;
-  gv('yieldGoal').value = f.yield_goal || 200;
-  gv('prevCrop').value  = f.prev_crop || 'corn';
-  gv('residualN').value = f.residual_n || 0;
-  gv('plantDate').value = f.planting_date || '';
-  setActiveField(f.id, f.name);
-  gv('yieldGoal').scrollIntoView({behavior:'smooth', block:'center'});
+  function renderField(f){
+    gv('texture').value   = f.texture || 'medium';
+    gv('om').value        = f.om != null ? f.om : 2.5;
+    gv('yieldGoal').value = f.yield_goal || 200;
+    gv('prevCrop').value  = f.prev_crop || 'corn';
+    gv('residualN').value = f.residual_n || 0;
+    gv('plantDate').value = f.planting_date || '';
+    setActiveField(f.id, f.name);
+    gv('yieldGoal').scrollIntoView({behavior:'smooth', block:'center'});
+  }
+  if(sbUser){
+    sb.from('nm_fields').select('*').eq('id',id).single().then(function(res){
+      if(res.error||!res.data){ fbStatus('Could not open field','var(--bad)'); return; }
+      renderField(res.data);
+    });
+  } else {
+    var f = lsGetFields().find(function(x){ return x.id===id; });
+    if(f) renderField(f); else fbStatus('Field not found','var(--bad)');
+  }
 }
 
 function saveField(){
   if(!activeFieldId) return;
-  var f = lsGetField(activeFieldId);
-  if(!f) return;
-  f.texture       = gv('texture').value || 'medium';
-  f.om            = parseFloat(gv('om').value) || 2.5;
-  f.yield_goal    = parseInt(gv('yieldGoal').value) || 200;
-  f.prev_crop     = gv('prevCrop').value || 'corn';
-  f.residual_n    = parseInt(gv('residualN').value) || 0;
-  f.planting_date = gv('plantDate').value || '';
-  f.updated_at    = new Date().toISOString();
-  lsUpsertField(f);
-  fbStatus('Saved!','var(--ok)');
-  setTimeout(function(){ fbStatus(''); }, 2500);
+  var payload = {
+    texture:       gv('texture').value || 'medium',
+    om:            parseFloat(gv('om').value) || 2.5,
+    yield_goal:    parseInt(gv('yieldGoal').value) || 200,
+    prev_crop:     gv('prevCrop').value || 'corn',
+    residual_n:    parseInt(gv('residualN').value) || 0,
+    planting_date: gv('plantDate').value || null,
+    updated_at:    new Date().toISOString()
+  };
+  if(sbUser){
+    sb.from('nm_fields').update(payload).eq('id',activeFieldId).then(function(res){
+      if(res.error){ fbStatus('Save failed: '+res.error.message,'var(--bad)'); return; }
+      fbStatus('Saved!','var(--ok)');
+      setTimeout(function(){ fbStatus(''); }, 2500);
+    });
+  } else {
+    var arr = lsGetFields();
+    var idx = arr.findIndex(function(f){ return f.id===activeFieldId; });
+    if(idx>=0){ arr[idx] = Object.assign(arr[idx], payload); lsSave(arr); }
+    fbStatus('Saved!','var(--ok)');
+    setTimeout(function(){ fbStatus(''); }, 2500);
+  }
 }
 
 function logRun(inputs, results){
-  // Best-effort Supabase log — silently skipped if not connected
-  if(!sb) return;
+  if(!sb || !sbUser) return;
   sb.from('nm_runs').insert({
+    user_id:  sbUser.id,
     field_id: activeFieldId || null,
     stage:    inputs.stage || '',
     inputs:   inputs,
@@ -1215,11 +1262,7 @@ function calculate(){
   });
 }
 
-// Init on DOM ready
-document.addEventListener('DOMContentLoaded', function(){
-  loadFields();    // instant — reads localStorage
-  initSupabase();  // background — for run history logging
-});
+document.addEventListener('DOMContentLoaded', initSupabase);
 </script>
 </body>
 </html>
