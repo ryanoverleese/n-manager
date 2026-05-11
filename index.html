@@ -1017,78 +1017,119 @@ function logRun(inputs, results){
   });
 }
 
-// ── GROWTH STAGE ESTIMATOR ────────────────────────
-// Calendar-day model calibrated for Nebraska corn (late April / early May planting).
-// GDD-based would be more accurate; this is within ~1 stage for typical years.
-var STAGE_DAYS = [
-  {v:'VE-V3',  l:'VE–V3',  pct:5,   min:0,   max:22},
-  {v:'V4-V6',  l:'V4–V6',  pct:10,  min:22,  max:38},
-  {v:'V7-V9',  l:'V7–V9',  pct:20,  min:38,  max:51},
-  {v:'V10-V12',l:'V10–V12',pct:35,  min:51,  max:63},
-  {v:'V13-V15',l:'V13–V15',pct:55,  min:63,  max:72},
-  {v:'V16-VT', l:'V16–VT', pct:70,  min:72,  max:80},
-  {v:'R1',     l:'R1',     pct:80,  min:80,  max:89},
-  {v:'R2',     l:'R2',     pct:88,  min:89,  max:97},
-  {v:'R3',     l:'R3',     pct:94,  min:97,  max:107},
-  {v:'R4',     l:'R4',     pct:98,  min:107, max:117},
-  {v:'R5-R6',  l:'R5–R6',  pct:100, min:117, max:999}
+// ── GROWTH STAGE / GDU ────────────────────────────
+// GDU thresholds ported from acre-ops/PlantingClient.tsx (CORN_STAGES).
+// GDU formula from acre-ops/api/gdu/route.ts: max(0,(min(tmax,86)+max(tmin,50))/2-50).
+// Weather: Open Meteo free API, no key required.
+var STAGE_GDU = [
+  {v:'VE-V3',  l:'VE–V3',  pct:5,   gdu:0   },
+  {v:'V4-V6',  l:'V4–V6',  pct:10,  gdu:455 },
+  {v:'V7-V9',  l:'V7–V9',  pct:20,  gdu:710 },
+  {v:'V10-V12',l:'V10–V12',pct:35,  gdu:965 },
+  {v:'V13-V15',l:'V13–V15',pct:55,  gdu:1135},
+  {v:'V16-VT', l:'V16–VT', pct:70,  gdu:1270},
+  {v:'R1',     l:'R1',          pct:80,  gdu:1400},
+  {v:'R2',     l:'R2',          pct:88,  gdu:1560},
+  {v:'R3',     l:'R3',          pct:94,  gdu:1750},
+  {v:'R4',     l:'R4',          pct:98,  gdu:2020},
+  {v:'R5-R6',  l:'R5–R6',  pct:100, gdu:2300}
 ];
 
-var stageManual = false; // true when user has overridden the estimate
+var stageManual = false;
+var gduCache = {};
 
-function stageFromDays(days){
-  for(var i=0; i<STAGE_DAYS.length; i++){
-    if(days >= STAGE_DAYS[i].min && days < STAGE_DAYS[i].max) return STAGE_DAYS[i];
+function stageFromGDU(gdu){
+  var s = STAGE_GDU[0];
+  for(var i=0; i<STAGE_GDU.length; i++){
+    if(gdu >= STAGE_GDU[i].gdu) s = STAGE_GDU[i];
+    else break;
   }
-  return STAGE_DAYS[STAGE_DAYS.length-1];
+  return s;
+}
+
+function fetchGDU(lat, lon, startDate, cb){
+  var cacheKey = lat.toFixed(3)+','+lon.toFixed(3)+','+startDate;
+  if(gduCache[cacheKey] !== undefined){ cb(gduCache[cacheKey]); return; }
+  var today = new Date().toISOString().slice(0,10);
+  var url = 'https://api.open-meteo.com/v1/forecast' +
+    '?latitude='+lat.toFixed(4)+'&longitude='+lon.toFixed(4) +
+    '&daily=temperature_2m_max,temperature_2m_min' +
+    '&start_date='+startDate+'&end_date='+today +
+    '&temperature_unit=fahrenheit&timezone=auto';
+  var xhr = new XMLHttpRequest();
+  xhr.onload = function(){
+    try{
+      var d = JSON.parse(xhr.responseText);
+      if(!d.daily || !d.daily.temperature_2m_max){ cb(null); return; }
+      var gdu = 0;
+      for(var i=0; i<d.daily.temperature_2m_max.length; i++){
+        var tmax = Math.min(d.daily.temperature_2m_max[i]||50, 86);
+        var tmin = Math.max(d.daily.temperature_2m_min[i]||50, 50);
+        gdu += Math.max(0, (tmax+tmin)/2 - 50);
+      }
+      gdu = Math.round(gdu);
+      gduCache[cacheKey] = gdu;
+      cb(gdu);
+    }catch(e){ cb(null); }
+  };
+  xhr.onerror = function(){ cb(null); };
+  xhr.open('GET', url);
+  xhr.send();
 }
 
 function updateStageFromDate(){
+  if(stageManual) return;
   var pd = gv('plantDate').value;
-  var est = gv('stage-est');
   if(!pd){
     gv('stage-est-lbl').textContent = 'Enter planting date';
     gv('stage-est-sub').textContent = '';
-    gv('stage-hint').textContent    = '';
     return;
   }
-  var plant = new Date(pd + 'T12:00:00'); // noon to avoid DST edge cases
-  var today = new Date();
-  var days  = Math.floor((today - plant) / 86400000);
+  var days = Math.floor((new Date() - new Date(pd+'T12:00:00')) / 86400000);
   if(days < 0){
     gv('stage-est-lbl').textContent = 'Not planted yet';
     gv('stage-est-sub').textContent = '';
-    gv('stage-hint').textContent    = '';
     return;
   }
-  if(!stageManual){
-    var s = stageFromDays(days);
-    // sync hidden select
-    gv('stage').value = s.v;
-    est.className = 'stage-est';
-    gv('stage-est-lbl').textContent = s.l;
-    gv('stage-est-sub').textContent = 'Day '+days+' · est. from planting date';
-    gv('stage-hint').textContent    = '';
+  gv('stage-est-lbl').textContent = 'Calculating GDU…';
+  gv('stage-est-sub').textContent = '';
+  function withLocation(lat, lon){
+    fetchGDU(lat, lon, pd, function(gdu){
+      if(gdu === null){
+        gv('stage-est-lbl').textContent = 'GDU unavailable';
+        gv('stage-est-sub').textContent = 'Check connection';
+        return;
+      }
+      var s = stageFromGDU(gdu);
+      gv('stage').value = s.v;
+      gv('stage-est').className = 'stage-est';
+      gv('stage-est-lbl').textContent = s.l;
+      gv('stage-est-sub').textContent = gdu.toLocaleString()+' GDU · from planting date';
+    });
+  }
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(
+      function(pos){ withLocation(pos.coords.latitude, pos.coords.longitude); },
+      function(){ withLocation(40.87, -98.35); },
+      {timeout:4000, maximumAge:300000}
+    );
   } else {
-    // show days alongside manual selection
-    gv('stage-est-sub').textContent = 'Day '+days+' from planting (manual override)';
+    withLocation(40.87, -98.35);
   }
 }
 
 function toggleStageOverride(){
-  var sel  = gv('stage');
-  var btn  = gv('stage-override-btn');
-  var est  = gv('stage-est');
+  var sel = gv('stage');
+  var btn = gv('stage-override-btn');
   if(!stageManual){
-    // enter manual mode
     stageManual = true;
     sel.classList.add('show');
-    btn.textContent = 'Use estimate';
-    est.className = 'stage-est manual';
-    gv('stage-est-lbl').textContent = sel.options[sel.selectedIndex].text.split('—')[0].split(' (')[0].trim();
+    btn.textContent = 'Use GDU';
+    gv('stage-est').className = 'stage-est manual';
+    var lbl = sel.options[sel.selectedIndex].text.split('—')[0].split(' (')[0].trim();
+    gv('stage-est-lbl').textContent = lbl;
     gv('stage-est-sub').textContent = 'Manual override';
   } else {
-    // back to auto
     stageManual = false;
     sel.classList.remove('show');
     btn.textContent = 'Override';
@@ -1104,7 +1145,6 @@ function onStageOverride(){
     gv('stage-est-sub').textContent = 'Manual override';
   }
 }
-
 // ── STAGES ────────────────────────────────────────
 var STAGES = [
   {v:'VE-V3',l:'VE–V3',pct:5},{v:'V4-V6',l:'V4–V6',pct:10},
