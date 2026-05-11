@@ -62,6 +62,41 @@ header::after{
 .card-ico svg{width:18px;height:18px;color:var(--ok)}
 .card-ttl{font-size:15px;font-weight:700;color:var(--t1)}
 .card-sub{font-size:12px;color:var(--t3);margin-top:1px}
+/* Step badge */
+.step-badge{
+  margin-left:auto;flex-shrink:0;
+  font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  background:var(--bg);border:1px solid var(--border);
+  color:var(--t3);border-radius:20px;padding:3px 10px}
+/* App sub-section divider */
+.app-section-hd{
+  font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--t4);margin:18px 0 8px;display:flex;align-items:center;gap:8px}
+.app-section-hd::after{content:'';flex:1;height:1px;background:var(--border)}
+/* Expand fertigations toggle */
+.expand-btn{
+  width:100%;padding:10px 14px;margin-top:10px;
+  background:var(--bg);border:1.5px dashed var(--border);
+  border-radius:var(--r-sm);font-size:13px;font-weight:600;
+  color:var(--t3);cursor:pointer;text-align:center;
+  transition:background .15s,border-color .15s}
+.expand-btn:hover{background:#e8f0e8;border-color:var(--focus);color:var(--ok)}
+/* Collapsible loss card */
+.loss-toggle{
+  display:flex;align-items:center;justify-content:space-between;
+  cursor:pointer;padding:16px 20px;margin:-20px -20px 0;
+  border-radius:var(--r-lg) var(--r-lg) 0 0;
+  user-select:none;-webkit-user-select:none}
+.loss-toggle:hover{background:#fafcfa}
+.loss-toggle-icon{
+  width:24px;height:24px;border-radius:50%;
+  background:var(--bg);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;color:var(--t3);transition:transform .2s}
+.loss-toggle-icon.open{transform:rotate(90deg)}
+.loss-body{overflow:hidden;transition:max-height .3s ease;max-height:0}
+.loss-body.open{max-height:2000px}
+.loss-body-inner{padding-top:18px;border-top:1px solid var(--border);margin-top:16px}
 
 /* ── FORM ELEMENTS ───────────────────────────────── */
 .field{margin-top:14px}
@@ -287,6 +322,7 @@ footer a{color:var(--t3);text-decoration:none}
       </svg>
     </div>
     <div><div class="card-ttl">Field Profile</div><div class="card-sub">Field identity, yield target &amp; soil</div></div>
+    <div class="step-badge">Step 1 of 3</div>
   </div>
   <div class="grid2">
     <div class="field"><label>Field Name</label><input type="text" id="fieldName" value="John Doe — North Pivot"></div>
@@ -357,7 +393,10 @@ footer a{color:var(--t3);text-decoration:none}
       </svg>
     </div>
     <div><div class="card-ttl">Nitrogen Applications</div><div class="card-sub">All N sources applied this season</div></div>
+    <div class="step-badge">Step 2 of 3</div>
   </div>
+
+  <div class="app-section-hd">Pre-Season</div>
 
   <div class="app-box">
     <div class="app-box-hd"><span class="app-box-ttl">Pre-Plant</span></div>
@@ -378,6 +417,8 @@ footer a{color:var(--t3);text-decoration:none}
       </div>
     </div>
   </div>
+
+  <div class="app-section-hd">In-Season</div>
 
   <div class="app-box">
     <div class="app-box-hd"><span class="app-box-ttl">Sidedress</span></div>
@@ -418,37 +459,51 @@ footer a{color:var(--t3);text-decoration:none}
     </div>
   </div>
 
-  <div class="app-box">
-    <div class="app-box-hd"><span class="app-box-ttl">Fertigation 2</span><span class="opt-badge">Optional</span></div>
-    <div class="grid2">
-      <div class="field"><label>Product</label>
-        <select id="f2-prod"><option selected>UAN 28%</option><option>UAN 32%</option><option>AMS (21% N)</option><option>Urea (46% N)</option><option>Other</option></select>
-      </div>
-      <div class="field"><label>Rate (lb N/ac)</label><input type="number" id="f2-rate" value="0" min="0" max="150"></div>
-    </div>
-  </div>
+  <button type="button" class="expand-btn" id="fert-expand-btn" onclick="toggleFertigations()">
+    + Add Another Fertigation
+  </button>
 
-  <div class="app-box">
-    <div class="app-box-hd"><span class="app-box-ttl">Fertigation 3</span><span class="opt-badge">Optional</span></div>
-    <div class="grid2">
-      <div class="field"><label>Product</label>
-        <select id="f3-prod"><option selected>UAN 28%</option><option>UAN 32%</option><option>AMS (21% N)</option><option>Urea (46% N)</option><option>Other</option></select>
+  <div id="fert-extra" style="display:none">
+    <div class="app-box" style="margin-top:10px">
+      <div class="app-box-hd"><span class="app-box-ttl">Fertigation 2</span></div>
+      <div class="grid2">
+        <div class="field"><label>Product</label>
+          <select id="f2-prod"><option selected>UAN 28%</option><option>UAN 32%</option><option>AMS (21% N)</option><option>Urea (46% N)</option><option>Other</option></select>
+        </div>
+        <div class="field"><label>Rate (lb N/ac)</label><input type="number" id="f2-rate" value="0" min="0" max="150"></div>
       </div>
-      <div class="field"><label>Rate (lb N/ac)</label><input type="number" id="f3-rate" value="0" min="0" max="150"></div>
+    </div>
+
+    <div class="app-box" style="margin-top:10px">
+      <div class="app-box-hd"><span class="app-box-ttl">Fertigation 3</span></div>
+      <div class="grid2">
+        <div class="field"><label>Product</label>
+          <select id="f3-prod"><option selected>UAN 28%</option><option>UAN 32%</option><option>AMS (21% N)</option><option>Urea (46% N)</option><option>Other</option></select>
+        </div>
+        <div class="field"><label>Rate (lb N/ac)</label><input type="number" id="f3-rate" value="0" min="0" max="150"></div>
+      </div>
     </div>
   </div>
 </div>
 
 <!-- ── LOSS FACTORS ──────────────────────────────── -->
 <div class="card">
-  <div class="card-hd">
-    <div class="card-ico" style="background:#fff3cd">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-      </svg>
+  <div class="loss-toggle" onclick="toggleLossCard()" id="loss-toggle">
+    <div class="card-hd" style="border:none;margin:0;padding:0;flex:1">
+      <div class="card-ico" style="background:#fff3cd">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+        </svg>
+      </div>
+      <div>
+        <div class="card-ttl">Losses &amp; Water Credits</div>
+        <div class="card-sub">Step 3 of 3 — Leaching, denitrification &amp; irrigation water NO₃</div>
+      </div>
     </div>
-    <div><div class="card-ttl">Losses &amp; Water Credits</div><div class="card-sub">Leaching, denitrification, irrigation losses &amp; water NO₃</div></div>
+    <div class="loss-toggle-icon" id="loss-toggle-icon">›</div>
   </div>
+  <div class="loss-body" id="loss-body">
+  <div class="loss-body-inner">
 
   <div class="field">
     <label>Irrigation Water Nitrate</label>
@@ -492,6 +547,8 @@ footer a{color:var(--t3);text-decoration:none}
       <label class="radio-item"><input type="radio" name="irrigexcess" value="2"><div><div class="radio-item-lbl">Heavy excess (&gt;2" over ET)</div><div class="radio-item-sub">Additional 15% N leaching loss</div></div></label>
     </div>
   </div>
+  </div></div><!-- end loss-body-inner, loss-body -->
+
 </div>
 
 <button class="cta" onclick="calculate()">
@@ -599,6 +656,29 @@ var TIMING_EFF = {fall:0.92, spring:0.97};
 
 function gv(id){return document.getElementById(id);}
 function num(id){return parseFloat(gv(id).value)||0;}
+
+function toggleFertigations(){
+  var el = gv('fert-extra');
+  var btn = gv('fert-expand-btn');
+  var open = el.style.display === 'block';
+  el.style.display = open ? 'none' : 'block';
+  btn.textContent = open ? '+ Add Another Fertigation' : '− Hide Extra Fertigations';
+}
+
+function toggleLossCard(){
+  var body = gv('loss-body');
+  var icon = gv('loss-toggle-icon');
+  var open = body.classList.contains('open');
+  if(open){
+    body.classList.remove('open');
+    icon.classList.remove('open');
+    icon.textContent = '›';
+  } else {
+    body.classList.add('open');
+    icon.classList.add('open');
+    icon.textContent = '‹';
+  }
+}
 
 function r2(n){return Math.round(n);}
 function fmt(n,plus){
