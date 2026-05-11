@@ -289,9 +289,36 @@ details[open] summary::after{content:'‹'}
 footer{text-align:center;font-size:11px;color:var(--t4);
   padding:8px 16px 32px}
 footer a{color:var(--t3);text-decoration:none}
+
+/* ── FIELD BAR ───────────────────────────────────── */
+.field-bar{
+  background:var(--card);border-bottom:1px solid var(--border);
+  padding:10px 16px;display:flex;align-items:center;gap:8px;
+  flex-wrap:wrap;position:sticky;top:0;z-index:100;
+  box-shadow:0 1px 4px rgba(12,26,12,.07)}
+.field-bar select{
+  flex:1;min-width:140px;height:36px;padding:0 10px;
+  border:1.5px solid var(--border);border-radius:var(--r-sm);
+  font-size:13px;color:var(--t1);background:var(--bg);
+  appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23607060' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+.field-bar select:focus{outline:none;border-color:var(--focus)}
+.fb-btn{
+  height:36px;padding:0 14px;border-radius:var(--r-sm);
+  font-size:13px;font-weight:600;cursor:pointer;
+  border:1.5px solid var(--border);white-space:nowrap;
+  display:flex;align-items:center;gap:6px;transition:background .15s}
+.fb-btn.load{background:var(--bg);color:var(--t2)}
+.fb-btn.load:hover{background:#e8f0e8}
+.fb-btn.save{background:var(--brand);color:#fff;border-color:var(--brand)}
+.fb-btn.save:hover{background:var(--brand2)}
+.fb-btn:disabled{opacity:.5;cursor:default}
+.fb-status{font-size:12px;color:var(--t3);width:100%;text-align:center;
+  display:none;padding-top:2px}
 </style>
 </head>
 <body>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
 <header>
   <div class="hd-inner">
@@ -310,6 +337,16 @@ footer a{color:var(--t3);text-decoration:none}
   </div>
   <div class="hd-sub">Irrigated Corn · Mid-Season Nitrogen Sufficiency</div>
 </header>
+
+<!-- ── FIELD BAR ──────────────────────────────────── -->
+<div class="field-bar">
+  <select id="field-select" onchange="onFieldSelect()" title="Saved fields">
+    <option value="">— Saved fields —</option>
+  </select>
+  <button class="fb-btn load" id="load-field-btn" onclick="loadSelectedField()" disabled>Load</button>
+  <button class="fb-btn save" id="save-field-btn" onclick="saveField()">Save Field</button>
+  <div class="fb-status" id="fb-status"></div>
+</div>
 
 <div class="wrap">
 
@@ -633,6 +670,128 @@ footer a{color:var(--t3);text-decoration:none}
 <footer>Acre Insights &nbsp;·&nbsp; <a href="mailto:ryan@acreinsights.com">ryan@acreinsights.com</a></footer>
 
 <script>
+// ── SUPABASE ──────────────────────────────────────
+var SB_URL = 'https://cpmogpbqzlmesxwjjxns.supabase.co';
+var SB_KEY = 'sb_publishable_PwKrpiIL2A83CfKIY14W_Q_Sdz84SSB';
+var sb = null;
+var sbUser = null;
+
+function sbStatus(msg, color){
+  var el = gv('fb-status');
+  el.textContent = msg;
+  el.style.color = color || 'var(--t3)';
+  el.style.display = msg ? 'block' : 'none';
+}
+
+function initSupabase(){
+  if(!window.supabase){ console.warn('Supabase SDK not loaded'); return; }
+  sb = window.supabase.createClient(SB_URL, SB_KEY, {
+    auth:{persistSession:true,autoRefreshToken:true,storageKey:'nm_auth'}
+  });
+  sb.auth.getSession().then(function(res){
+    if(res.data && res.data.session){
+      sbUser = res.data.session.user;
+      loadFields();
+    } else {
+      sb.auth.signInAnonymously().then(function(res2){
+        if(res2.data && res2.data.user){
+          sbUser = res2.data.user;
+          loadFields();
+        }
+      });
+    }
+  });
+}
+
+function loadFields(){
+  if(!sb || !sbUser) return;
+  sb.from('nm_fields').select('id,name,county').order('updated_at',{ascending:false}).then(function(res){
+    if(res.error){ console.error('loadFields',res.error); return; }
+    var sel = gv('field-select');
+    var cur = sel.value;
+    sel.innerHTML = '<option value="">— Saved fields —</option>';
+    (res.data||[]).forEach(function(f){
+      var o = document.createElement('option');
+      o.value = f.id;
+      o.textContent = f.name + (f.county ? ' · '+f.county : '');
+      sel.appendChild(o);
+    });
+    if(cur) sel.value = cur;
+    gv('load-field-btn').disabled = !sel.value;
+  });
+}
+
+function onFieldSelect(){
+  gv('load-field-btn').disabled = !gv('field-select').value;
+}
+
+function loadSelectedField(){
+  var selId = gv('field-select').value;
+  if(!selId || !sb) return;
+  sb.from('nm_fields').select('*').eq('id',selId).single().then(function(res){
+    if(res.error||!res.data){ sbStatus('Could not load field','var(--bad)'); return; }
+    var f = res.data;
+    gv('fieldName').value    = f.name || '';
+    gv('county').value       = f.county || '';
+    gv('texture').value      = f.texture || 'medium';
+    gv('om').value           = f.om != null ? f.om : 2.5;
+    gv('yieldGoal').value    = f.yield_goal || 200;
+    gv('prevCrop').value     = f.prev_crop || 'corn';
+    gv('residualN').value    = f.residual_n || 0;
+    if(f.planting_date) gv('plantDate').value = f.planting_date;
+    sbStatus('Field loaded — update N applications below','var(--ok)');
+    setTimeout(function(){ sbStatus(''); }, 4000);
+  });
+}
+
+function saveField(){
+  if(!sb){ sbStatus('Still connecting…','var(--t3)'); return; }
+  if(!sbUser){ sbStatus('Auth not ready, try again in a moment','var(--t3)'); return; }
+  var nm = (gv('fieldName').value||'').trim();
+  if(!nm){ sbStatus('Enter a field name first','var(--bad)'); gv('fieldName').focus(); return; }
+  var payload = {
+    user_id:    sbUser.id,
+    name:       nm,
+    county:     gv('county').value || '',
+    texture:    gv('texture').value || 'medium',
+    om:         parseFloat(gv('om').value) || 2.5,
+    yield_goal: parseInt(gv('yieldGoal').value) || 200,
+    prev_crop:  gv('prevCrop').value || 'corn',
+    residual_n: parseInt(gv('residualN').value) || 0,
+    planting_date: gv('plantDate').value || null,
+    updated_at: new Date().toISOString()
+  };
+  var selId = gv('field-select').value;
+  var q = selId
+    ? sb.from('nm_fields').update(payload).eq('id',selId).select('id').single()
+    : sb.from('nm_fields').insert(payload).select('id').single();
+  q.then(function(res){
+    if(res.error){ sbStatus('Save failed: '+res.error.message,'var(--bad)'); return; }
+    sbStatus('Saved!','var(--ok)');
+    setTimeout(function(){ sbStatus(''); }, 3000);
+    var id = res.data && res.data.id;
+    loadFields();
+    if(!selId && id) setTimeout(function(){ gv('field-select').value = id; gv('load-field-btn').disabled = false; }, 300);
+  });
+}
+
+function logRun(inputs, results){
+  if(!sb || !sbUser) return;
+  var selId = gv('field-select').value || null;
+  sb.from('nm_runs').insert({
+    user_id:  sbUser.id,
+    field_id: selId,
+    stage:    inputs.stage || '',
+    inputs:   inputs,
+    results:  results,
+    surplus:  results.surplus || 0,
+    status:   results.status || ''
+  }).then(function(res){
+    if(res.error) console.warn('logRun',res.error);
+  });
+}
+
+// ── STAGES ────────────────────────────────────────
 var STAGES = [
   {v:'VE-V3',l:'VE–V3',pct:5},{v:'V4-V6',l:'V4–V6',pct:10},
   {v:'V7-V9',l:'V7–V9',pct:20},{v:'V10-V12',l:'V10–V12',pct:35},
@@ -896,8 +1055,22 @@ function calculate(){
   // ── SHOW RESULTS ──────────────────────────────────
   gv('results').style.display = 'block';
   gv('results').scrollIntoView({behavior:'smooth'});
+
+  // ── LOG RUN ───────────────────────────────────────
+  logRun({
+    stage:stageVal, yieldGoal:yg, texture:texture, om:om, prevCrop:prevCrop,
+    residualN:residualN, ppRate:ppRate, sdRate:sdRate, stRate:stRate,
+    f1:f1, f2:f2, f3:f3, leachEvents:leachEvents, saturated:sat,
+    irrigExcess:irrigExcess, irrigPPM:irrigPPM, irrigInches:irrigInches
+  },{
+    surplus:surplus, status:surplus >= 0 ? 'sufficient' : 'deficit',
+    totalDemand:totalDemand, totalAvail:totalAvail, totalLoss:totalLoss,
+    rawApplied:rawApplied, soilCredits:soilCredits
+  });
 }
 
+// Init Supabase after DOM ready
+document.addEventListener('DOMContentLoaded', initSupabase);
 </script>
 </body>
 </html>
