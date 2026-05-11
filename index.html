@@ -296,6 +296,8 @@ footer a{color:var(--t3);text-decoration:none}
   padding:10px 16px;display:flex;align-items:center;gap:8px;
   flex-wrap:wrap;position:sticky;top:0;z-index:100;
   box-shadow:0 1px 4px rgba(12,26,12,.07)}
+/* states */
+.fb-state{display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap}
 /* left cluster: existing-field picker */
 .fb-existing{display:flex;align-items:center;gap:6px;flex:1;min-width:0}
 .field-bar select{
@@ -321,12 +323,22 @@ footer a{color:var(--t3);text-decoration:none}
 .fb-btn.update{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
 .fb-btn.update:hover{background:#1e40af}
 .fb-btn:disabled{opacity:.4;cursor:default;pointer-events:none}
-/* active field pill shown when a field is loaded */
+/* name input in create state */
+.fb-name-input{
+  flex:2;min-width:130px;height:36px;padding:0 12px;
+  border:1.5px solid var(--focus);border-radius:var(--r-sm);
+  font-size:13px;color:var(--t1);background:#fff}
+.fb-name-input:focus{outline:none}
+.fb-county-input{
+  flex:1;min-width:100px;height:36px;padding:0 12px;
+  border:1.5px solid var(--border);border-radius:var(--r-sm);
+  font-size:13px;color:var(--t1);background:#fff}
+.fb-county-input:focus{outline:none;border-color:var(--focus)}
+/* active field pill */
 .fb-active{
-  display:none;align-items:center;gap:6px;width:100%;
+  display:flex;align-items:center;gap:6px;flex:1;
   padding:6px 10px;background:#f0faf4;border-radius:var(--r-sm);
-  border:1px solid #bbf7d0;font-size:12px;color:var(--ok)}
-.fb-active.show{display:flex}
+  border:1px solid #bbf7d0;font-size:12px;color:var(--ok);min-width:0}
 .fb-active-name{font-weight:700;flex:1;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
 .fb-active svg{width:14px;height:14px;flex-shrink:0}
@@ -357,26 +369,47 @@ footer a{color:var(--t3);text-decoration:none}
 
 <!-- ── FIELD BAR ──────────────────────────────────── -->
 <div class="field-bar">
-  <!-- Existing fields -->
-  <div class="fb-existing">
-    <select id="field-select" onchange="onFieldSelect()" title="Open a saved field">
-      <option value="">— Open saved field —</option>
+
+  <!-- STATE A: No field active — open existing or start new -->
+  <div id="fb-state-idle" class="fb-state">
+    <div class="fb-existing">
+      <select id="field-select" onchange="onFieldSelect()" title="Open a saved field">
+        <option value="">— Open saved field —</option>
+      </select>
+      <button class="fb-btn load" id="load-field-btn" onclick="loadSelectedField()" disabled>Open</button>
+    </div>
+    <div class="fb-divider"></div>
+    <button class="fb-btn new-field" onclick="startNewField()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New Field
+    </button>
+  </div>
+
+  <!-- STATE B: Creating a new field — name it then create -->
+  <div id="fb-state-create" class="fb-state" style="display:none">
+    <input type="text" id="fb-name-input" class="fb-name-input" placeholder="Field name…" onkeydown="fbNameKey(event)">
+    <input type="text" id="fb-county-input" class="fb-county-input" placeholder="County (optional)" onkeydown="fbNameKey(event)">
+    <button class="fb-btn save" onclick="createField()">Create Field →</button>
+    <button class="fb-btn load" onclick="cancelNewField()" style="color:var(--t3)">Cancel</button>
+  </div>
+
+  <!-- STATE C: Field is active — show name + save changes / switch field -->
+  <div id="fb-state-edit" class="fb-state" style="display:none">
+    <div class="fb-active show" id="fb-active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span class="fb-active-name" id="fb-active-name">—</span>
+    </div>
+    <button class="fb-btn update" onclick="saveField()">Save Changes</button>
+    <div class="fb-divider"></div>
+    <button class="fb-btn new-field" onclick="startNewField()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New
+    </button>
+    <select id="field-select-edit" onchange="switchField(this.value)" title="Switch field" style="height:36px;padding:0 28px 0 10px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:13px;background:var(--bg);appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%228%22 viewBox=%220 0 12 8%22%3E%3Cpath d=%22M1 1l5 5 5-5%22 stroke=%22%23607060%22 stroke-width=%221.5%22 fill=%22none%22 stroke-linecap=%22round%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 10px center;cursor:pointer">
+      <option value="">Switch field…</option>
     </select>
-    <button class="fb-btn load" id="load-field-btn" onclick="loadSelectedField()" disabled>Open</button>
   </div>
-  <div class="fb-divider"></div>
-  <!-- New / save actions -->
-  <button class="fb-btn new-field" id="new-field-btn" onclick="newField()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    New Field
-  </button>
-  <button class="fb-btn save" id="save-field-btn" onclick="saveField()">Save Field</button>
-  <!-- Active field indicator -->
-  <div class="fb-active" id="fb-active">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-    <span class="fb-active-name" id="fb-active-name">—</span>
-    <span style="font-size:11px;opacity:.75">Editing</span>
-  </div>
+
   <div class="fb-status" id="fb-status"></div>
 </div>
 
@@ -390,12 +423,8 @@ footer a{color:var(--t3);text-decoration:none}
         <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
       </svg>
     </div>
-    <div><div class="card-ttl">Field Profile</div><div class="card-sub">Field identity, yield target &amp; soil</div></div>
+    <div><div class="card-ttl">Field Profile</div><div class="card-sub">Yield target, soil characteristics &amp; crop history</div></div>
     <div class="step-badge">Step 1 of 3</div>
-  </div>
-  <div class="grid2">
-    <div class="field"><label>Field Name</label><input type="text" id="fieldName" value="John Doe — North Pivot"></div>
-    <div class="field"><label>County</label><input type="text" id="county" value="Kearney"></div>
   </div>
   <div class="grid2">
     <div class="field">
@@ -739,59 +768,103 @@ function loadFields(){
   if(!sb || !sbUser) return;
   sb.from('nm_fields').select('id,name,county').order('updated_at',{ascending:false}).then(function(res){
     if(res.error){ console.error('loadFields',res.error); return; }
-    var sel = gv('field-select');
-    var cur = sel.value;
-    sel.innerHTML = '<option value="">— Saved fields —</option>';
-    (res.data||[]).forEach(function(f){
-      var o = document.createElement('option');
-      o.value = f.id;
-      o.textContent = f.name + (f.county ? ' · '+f.county : '');
-      sel.appendChild(o);
-    });
-    if(cur) sel.value = cur;
-    gv('load-field-btn').disabled = !sel.value;
+    var fields = res.data || [];
+    function buildOptions(sel, emptyLabel){
+      var cur = sel.value;
+      sel.innerHTML = '<option value="">'+emptyLabel+'</option>';
+      fields.forEach(function(f){
+        var o = document.createElement('option');
+        o.value = f.id;
+        o.textContent = f.name + (f.county ? ' · '+f.county : '');
+        sel.appendChild(o);
+      });
+      if(cur) sel.value = cur;
+    }
+    buildOptions(gv('field-select'), '— Open saved field —');
+    gv('load-field-btn').disabled = !gv('field-select').value;
+    var editSel = gv('field-select-edit');
+    if(editSel) buildOptions(editSel, 'Switch field…');
   });
 }
 
-// Track current editing state
-var activeFieldId = null; // null = new field mode
+// ── FIELD STATE ───────────────────────────────────
+var activeFieldId   = null;
+var activeFieldName = null;
 
-function setActiveField(id, name){
-  activeFieldId = id;
-  var isEdit = !!id;
-  // Save button: "Save Field" (create) vs "Save Changes" (update)
-  var saveBtn = gv('save-field-btn');
-  saveBtn.textContent = isEdit ? 'Save Changes' : 'Save Field';
-  saveBtn.className = 'fb-btn ' + (isEdit ? 'update' : 'save');
-  // Active field banner
-  var banner = gv('fb-active');
-  if(isEdit){
-    gv('fb-active-name').textContent = name || 'Field';
-    banner.classList.add('show');
-  } else {
-    banner.classList.remove('show');
-  }
-  // Sync dropdown to match
-  if(id) gv('field-select').value = id;
+function fbState(s){
+  // s: 'idle' | 'create' | 'edit'
+  gv('fb-state-idle').style.display   = s==='idle'   ? 'flex' : 'none';
+  gv('fb-state-create').style.display = s==='create' ? 'flex' : 'none';
+  gv('fb-state-edit').style.display   = s==='edit'   ? 'flex' : 'none';
 }
 
-function newField(){
-  // Clear form to defaults
-  gv('fieldName').value  = '';
-  gv('county').value     = '';
-  gv('yieldGoal').value  = '200';
-  gv('om').value         = '2.5';
-  gv('texture').value    = 'medium';
-  gv('prevCrop').value   = 'corn';
-  gv('residualN').value  = '0';
-  gv('plantDate').value  = '';
-  gv('field-select').value = '';
-  gv('load-field-btn').disabled = true;
-  gv('results').style.display = 'none';
-  setActiveField(null, null);
+function setActiveField(id, name){
+  activeFieldId   = id;
+  activeFieldName = name;
+  if(id){
+    gv('fb-active-name').textContent = name || 'Field';
+    fbState('edit');
+    // sync switch-field dropdown
+    var editSel = gv('field-select-edit');
+    if(editSel) editSel.value = '';
+  } else {
+    fbState('idle');
+  }
   sbStatus('');
-  // Focus field name so user can start typing
-  gv('fieldName').focus();
+}
+
+function startNewField(){
+  fbState('create');
+  gv('fb-name-input').value   = '';
+  gv('fb-county-input').value = '';
+  sbStatus('');
+  setTimeout(function(){ gv('fb-name-input').focus(); }, 50);
+}
+
+function cancelNewField(){
+  fbState(activeFieldId ? 'edit' : 'idle');
+  sbStatus('');
+}
+
+function fbNameKey(e){
+  if(e.key === 'Enter') createField();
+  if(e.key === 'Escape') cancelNewField();
+}
+
+function createField(){
+  if(!sb || !sbUser){ sbStatus('Still connecting…','var(--t3)'); return; }
+  var nm = (gv('fb-name-input').value||'').trim();
+  if(!nm){ gv('fb-name-input').focus(); return; }
+  var county = (gv('fb-county-input').value||'').trim();
+  var payload = {
+    user_id:    sbUser.id,
+    name:       nm,
+    county:     county,
+    texture:    'medium',
+    om:         2.5,
+    yield_goal: 200,
+    prev_crop:  'corn',
+    residual_n: 0,
+    updated_at: new Date().toISOString()
+  };
+  sb.from('nm_fields').insert(payload).select('id').single().then(function(res){
+    if(res.error){ sbStatus('Could not create field: '+res.error.message,'var(--bad)'); return; }
+    var id = res.data.id;
+    // Reset form to defaults
+    gv('yieldGoal').value  = '200';
+    gv('om').value         = '2.5';
+    gv('texture').value    = 'medium';
+    gv('prevCrop').value   = 'corn';
+    gv('residualN').value  = '0';
+    gv('plantDate').value  = '';
+    gv('results').style.display = 'none';
+    setActiveField(id, nm);
+    loadFields();
+    sbStatus('Field created — fill in the details below','var(--ok)');
+    setTimeout(function(){ sbStatus(''); }, 4000);
+    // Scroll to first real input
+    gv('yieldGoal').scrollIntoView({behavior:'smooth', block:'center'});
+  });
 }
 
 function onFieldSelect(){
@@ -801,33 +874,34 @@ function onFieldSelect(){
 function loadSelectedField(){
   var selId = gv('field-select').value;
   if(!selId || !sb) return;
-  sb.from('nm_fields').select('*').eq('id',selId).single().then(function(res){
-    if(res.error||!res.data){ sbStatus('Could not load field','var(--bad)'); return; }
+  applyField(selId);
+}
+
+function switchField(id){
+  if(!id) return;
+  applyField(id);
+  // reset dropdown after switch
+  setTimeout(function(){ var s=gv('field-select-edit'); if(s) s.value=''; }, 200);
+}
+
+function applyField(id){
+  sb.from('nm_fields').select('*').eq('id',id).single().then(function(res){
+    if(res.error||!res.data){ sbStatus('Could not open field','var(--bad)'); return; }
     var f = res.data;
-    gv('fieldName').value    = f.name || '';
-    gv('county').value       = f.county || '';
-    gv('texture').value      = f.texture || 'medium';
-    gv('om').value           = f.om != null ? f.om : 2.5;
-    gv('yieldGoal').value    = f.yield_goal || 200;
-    gv('prevCrop').value     = f.prev_crop || 'corn';
-    gv('residualN').value    = f.residual_n || 0;
-    gv('plantDate').value    = f.planting_date || '';
+    gv('texture').value   = f.texture || 'medium';
+    gv('om').value        = f.om != null ? f.om : 2.5;
+    gv('yieldGoal').value = f.yield_goal || 200;
+    gv('prevCrop').value  = f.prev_crop || 'corn';
+    gv('residualN').value = f.residual_n || 0;
+    gv('plantDate').value = f.planting_date || '';
     setActiveField(f.id, f.name);
-    sbStatus('');
-    // Scroll to top of form
-    gv('fieldName').scrollIntoView({behavior:'smooth', block:'center'});
+    gv('yieldGoal').scrollIntoView({behavior:'smooth', block:'center'});
   });
 }
 
 function saveField(){
-  if(!sb){ sbStatus('Still connecting…','var(--t3)'); return; }
-  if(!sbUser){ sbStatus('Auth not ready, try again','var(--t3)'); return; }
-  var nm = (gv('fieldName').value||'').trim();
-  if(!nm){ sbStatus('Enter a field name first','var(--bad)'); gv('fieldName').focus(); return; }
+  if(!sb || !sbUser || !activeFieldId){ return; }
   var payload = {
-    user_id:       sbUser.id,
-    name:          nm,
-    county:        gv('county').value || '',
     texture:       gv('texture').value || 'medium',
     om:            parseFloat(gv('om').value) || 2.5,
     yield_goal:    parseInt(gv('yieldGoal').value) || 200,
@@ -836,16 +910,10 @@ function saveField(){
     planting_date: gv('plantDate').value || null,
     updated_at:    new Date().toISOString()
   };
-  var q = activeFieldId
-    ? sb.from('nm_fields').update(payload).eq('id',activeFieldId).select('id').single()
-    : sb.from('nm_fields').insert(payload).select('id').single();
-  q.then(function(res){
+  sb.from('nm_fields').update(payload).eq('id',activeFieldId).then(function(res){
     if(res.error){ sbStatus('Save failed: '+res.error.message,'var(--bad)'); return; }
-    var id = (res.data && res.data.id) || activeFieldId;
-    setActiveField(id, nm);
     sbStatus('Saved!','var(--ok)');
-    setTimeout(function(){ sbStatus(''); }, 3000);
-    loadFields();
+    setTimeout(function(){ sbStatus(''); }, 2500);
   });
 }
 
