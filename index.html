@@ -2,1136 +2,657 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Acre Insights — N Manager</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>N Manager — Acre Insights</title>
 <style>
-body{font-family:-apple-system,sans-serif;background:#f4f6f8;color:#1f2937;font-size:16px;margin:0;padding:0}
-header{background:#2d6a2d;color:#fff;padding:16px 20px}
-header h1{font-size:18px;margin:0}
-header p{font-size:13px;opacity:.8;margin:4px 0 0}
-.wrap{max-width:640px;margin:0 auto;padding:16px}
-.section{background:#fff;border:1px solid #d1d5db;border-radius:10px;padding:16px;margin-bottom:14px}
-.section h2{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#374151;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid #e5e7eb}
-label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;margin-top:12px}
-label:first-child{margin-top:0}
-input,select{width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:15px;color:#1f2937;background:#fff;box-sizing:border-box}
-.hint{font-size:12px;color:#6b7280;margin-top:3px}
-.nf-pill{flex:1;padding:10px 4px;border:2px solid #d1d5db;border-radius:8px;background:#fff;font-size:15px;font-weight:600;color:#374151;cursor:pointer;transition:all 0.15s}
-.nf-pill.nf-active{background:#1a56a0;border-color:#1a56a0;color:#fff}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media(max-width:480px){.row2{grid-template-columns:1fr}}
-.app-box{border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-top:10px;background:#fafafa}
-.app-box h3{font-size:13px;font-weight:700;color:#2d6a2d;margin:0 0 10px}
-.radio-group{margin-top:8px}
-.radio-group label{font-size:14px;font-weight:400;display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer}
-.radio-group input[type=radio]{width:auto}
-.calc-btn{display:block;width:100%;padding:16px;background:#2d6a2d;color:#fff;border:none;border-radius:10px;font-size:17px;font-weight:700;cursor:pointer;margin:8px 0 20px}
-/* Results */
-#results{display:none}
-.banner{border-radius:10px;padding:18px;margin-bottom:14px}
-.banner.sufficient{background:#e8f5e9;border:2px solid #4caf50}
-.banner.marginal,.banner.borderline{background:#fffbeb;border:2px solid #f59e0b}
-.banner.deficit{background:#fdecea;border:2px solid #c0392b}
-.big-num{font-size:32px;font-weight:800;margin:4px 0}
-.sufficient .big-num{color:#2d6a2d}
-.marginal .big-num,.borderline .big-num{color:#92400e}
-.deficit .big-num{color:#c0392b}
-.status-lbl{font-size:17px;font-weight:800;margin-bottom:4px}
-.sufficient .status-lbl{color:#2d6a2d}
-.marginal .status-lbl,.borderline .status-lbl{color:#92400e}
-.deficit .status-lbl{color:#c0392b}
-.rec{font-size:14px;color:#1f2937;margin-top:4px}
-.fert-rec{font-size:14px;font-weight:700;margin-top:6px}
-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
-th{text-align:left;padding:7px 8px;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb}
-td{padding:8px;border-bottom:1px solid #f3f4f6}
-.cr{color:#2d6a2d}
-.db{color:#c0392b}
-.tot td{font-weight:700;background:#f9fafb;border-top:2px solid #e5e7eb}
-canvas{width:100%;border-radius:6px;background:#f9fafb;margin-top:4px;display:block;cursor:crosshair}
-#chart-tip{position:fixed;background:#1f2937;color:#fff;padding:9px 13px;border-radius:10px;font-size:12px;line-height:1.6;pointer-events:none;display:none;z-index:300;box-shadow:0 6px 24px rgba(0,0,0,0.35);min-width:140px}
-.chart-legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:#6b7280;align-items:center}
-.leg-item{display:flex;align-items:center;gap:5px}
-.leg-solid{display:inline-block;width:20px;height:3px;border-radius:2px;background:#1a56a0}
-.leg-dash{display:inline-block;width:20px;height:0;border-top:2.5px dashed rgba(26,86,160,0.5)}
-.leg-ring{display:inline-block;width:12px;height:12px;border:2.5px solid #1a56a0;border-radius:50%}
-#hist-table td{padding:6px 8px}
-#hist-table .yr-good{color:#2d6a2d;font-weight:700}
-#hist-table .yr-bad{color:#c0392b;font-weight:700}
-#hist-table tr.yr-yours{background:#fffbeb}
-.print-btn{font-size:13px;font-weight:700;padding:8px 16px;border-radius:8px;border:1.5px solid #d1d5db;background:#fff;cursor:pointer;margin-top:12px}
-footer{text-align:center;font-size:11px;color:#9ca3af;padding:20px 16px}
+/* ── TOKENS ─────────────────────────────────────── */
+:root{
+  --bg:#edf2ed;--card:#fff;--border:#d1ddd1;--focus:#16a34a;
+  --t1:#0c1a0c;--t2:#2e4a2e;--t3:#607060;--t4:#93a893;
+  --brand:#1a5c36;--brand2:#0d3320;--brand-light:#22c55e;
+  --ok:#166534;--ok-bg:#dcfce7;--ok-b:#86efac;
+  --warn:#92400e;--warn-bg:#fffbeb;--warn-b:#fcd34d;
+  --bad:#991b1b;--bad-bg:#fff0f0;--bad-b:#fca5a5;
+  --blue:#1d4ed8;--blue-bg:#eff6ff;
+  --r:14px;--r-sm:8px;--r-lg:20px;--r-xl:24px;
+  --sh:0 1px 3px rgba(12,26,12,.07),0 4px 16px rgba(12,26,12,.05);
+  --sh-lg:0 2px 8px rgba(12,26,12,.08),0 12px 40px rgba(12,26,12,.09);
+}
+
+/* ── RESET ───────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif;
+  background:var(--bg);color:var(--t1);font-size:16px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;min-height:100vh}
+
+/* ── HEADER ──────────────────────────────────────── */
+header{
+  background:linear-gradient(150deg,var(--brand2) 0%,#1a5c36 55%,#1e7040 100%);
+  padding:env(safe-area-inset-top,0) 20px 24px;
+  padding-top:calc(env(safe-area-inset-top,0px) + 18px);
+  position:relative;overflow:hidden}
+header::after{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 120% 80% at 110% 20%,rgba(34,197,94,.18) 0%,transparent 60%);
+  pointer-events:none}
+.hd-inner{display:flex;align-items:center;gap:14px;position:relative}
+.hd-icon{width:44px;height:44px;border-radius:12px;
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hd-icon svg{width:24px;height:24px}
+.hd-tag{font-size:10px;font-weight:700;letter-spacing:.12em;
+  color:rgba(255,255,255,.55);text-transform:uppercase;margin-bottom:1px}
+.hd-title{font-size:22px;font-weight:800;color:#fff;letter-spacing:-.3px}
+.hd-sub{font-size:13px;color:rgba(255,255,255,.6);margin-top:6px;
+  padding-left:2px;letter-spacing:.01em}
+
+/* ── WRAP ────────────────────────────────────────── */
+.wrap{max-width:520px;margin:0 auto;padding:20px 16px 40px}
+
+/* ── CARD ────────────────────────────────────────── */
+.card{background:var(--card);border-radius:var(--r-lg);
+  box-shadow:var(--sh);border:1px solid var(--border);
+  padding:20px;margin-bottom:14px}
+.card-hd{display:flex;align-items:center;gap:12px;margin-bottom:18px;
+  padding-bottom:14px;border-bottom:1px solid var(--border)}
+.card-ico{width:36px;height:36px;border-radius:10px;
+  background:var(--ok-bg);display:flex;align-items:center;
+  justify-content:center;flex-shrink:0}
+.card-ico svg{width:18px;height:18px;color:var(--ok)}
+.card-ttl{font-size:15px;font-weight:700;color:var(--t1)}
+.card-sub{font-size:12px;color:var(--t3);margin-top:1px}
+
+/* ── FORM ELEMENTS ───────────────────────────────── */
+.field{margin-top:14px}
+.field:first-child{margin-top:0}
+label{display:block;font-size:12px;font-weight:700;
+  letter-spacing:.04em;color:var(--t2);text-transform:uppercase;
+  margin-bottom:6px}
+input[type=text],input[type=number],input[type=date],select{
+  width:100%;padding:13px 14px;
+  border:1.5px solid var(--border);border-radius:var(--r-sm);
+  font-size:15px;color:var(--t1);background:var(--card);
+  -webkit-appearance:none;appearance:none;
+  transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus{
+  outline:none;border-color:var(--focus);
+  box-shadow:0 0 0 3px rgba(22,163,74,.12)}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;
+  padding-right:36px}
+.hint{font-size:11px;color:var(--t4);margin-top:4px;line-height:1.4}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:400px){.grid2{grid-template-columns:1fr}}
+
+/* ── APP BOX (fertigation) ──────────────────────── */
+.app-box{border:1px solid var(--border);border-radius:var(--r);
+  padding:14px;margin-top:10px;background:#fafcfa}
+.app-box-hd{display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:12px}
+.app-box-ttl{font-size:13px;font-weight:700;color:var(--brand)}
+.opt-badge{font-size:10px;font-weight:600;color:var(--t4);
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:20px;padding:2px 8px}
+
+/* ── TIMING SELECTOR ─────────────────────────────── */
+.timing-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.timing-opt{position:relative}
+.timing-opt input[type=radio]{position:absolute;opacity:0;width:0;height:0}
+.timing-opt label{
+  display:flex;flex-direction:column;align-items:center;
+  padding:8px 6px;border:1.5px solid var(--border);border-radius:var(--r-sm);
+  font-size:11px;font-weight:600;color:var(--t3);cursor:pointer;
+  text-align:center;text-transform:none;letter-spacing:0;
+  background:var(--card);transition:all .15s;line-height:1.3}
+.timing-opt input:checked+label{
+  border-color:var(--focus);color:var(--ok);
+  background:var(--ok-bg);box-shadow:0 0 0 2px rgba(22,163,74,.15)}
+.timing-eff{font-size:10px;color:var(--t4);margin-top:2px;font-weight:400}
+.timing-opt input:checked+label .timing-eff{color:var(--ok)}
+
+/* ── RADIO / CHECKBOX ────────────────────────────── */
+.radio-set{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.radio-item,.check-item{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:11px 13px;border:1.5px solid var(--border);
+  border-radius:var(--r-sm);cursor:pointer;
+  transition:border-color .15s,background .15s}
+.radio-item:has(input:checked),.check-item:has(input:checked){
+  border-color:var(--focus);background:var(--ok-bg)}
+.radio-item input,.check-item input{
+  margin-top:2px;accent-color:var(--focus);width:16px;height:16px;
+  flex-shrink:0}
+.radio-item-lbl{font-size:14px;font-weight:500;color:var(--t1)}
+.radio-item-sub{font-size:12px;color:var(--t3)}
+
+/* ── CTA BUTTON ──────────────────────────────────── */
+.cta{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  width:100%;padding:17px;
+  background:linear-gradient(135deg,#1a7a3f,#15803d);
+  color:#fff;border:none;border-radius:var(--r-lg);
+  font-size:16px;font-weight:700;letter-spacing:.01em;
+  cursor:pointer;margin:8px 0 22px;
+  box-shadow:0 4px 16px rgba(21,128,61,.35),0 1px 3px rgba(21,128,61,.2);
+  transition:transform .1s,box-shadow .1s}
+.cta:active{transform:scale(.98);box-shadow:0 2px 8px rgba(21,128,61,.3)}
+.cta svg{width:20px;height:20px}
+
+/* ── RESULTS ─────────────────────────────────────── */
+#results{animation:fadeUp .4s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+/* Status card */
+.status-card{border-radius:var(--r-xl);padding:24px 22px;margin-bottom:14px;
+  border:1.5px solid transparent;position:relative;overflow:hidden}
+.status-card.sufficient{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-color:var(--ok-b)}
+.status-card.marginal{background:linear-gradient(135deg,#fffdf0,#fef9c3);border-color:var(--warn-b)}
+.status-card.borderline{background:linear-gradient(135deg,#fffbf0,#fef3c7);border-color:#f59e0b}
+.status-card.deficit{background:linear-gradient(135deg,#fff5f5,var(--bad-bg));border-color:var(--bad-b)}
+.sc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
+.sc-badge{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  padding:4px 10px;border-radius:20px}
+.sufficient .sc-badge{background:var(--ok);color:#fff}
+.marginal .sc-badge{background:var(--warn);color:#fff}
+.borderline .sc-badge{background:#d97706;color:#fff}
+.deficit .sc-badge{background:var(--bad);color:#fff}
+.sc-num{font-size:48px;font-weight:900;letter-spacing:-2px;line-height:1;margin:4px 0 8px}
+.sufficient .sc-num{color:var(--ok)}
+.marginal .sc-num,.borderline .sc-num{color:var(--warn)}
+.deficit .sc-num{color:var(--bad)}
+.sc-unit{font-size:18px;font-weight:600;vertical-align:super}
+.sc-rec{font-size:14px;color:var(--t2);line-height:1.5}
+.sc-action{
+  display:inline-flex;align-items:center;gap:6px;
+  margin-top:12px;padding:10px 16px;border-radius:var(--r);
+  font-size:13px;font-weight:700;border:none;cursor:default}
+.sufficient .sc-action{background:rgba(22,101,52,.1);color:var(--ok)}
+.marginal .sc-action,.borderline .sc-action{background:rgba(146,64,14,.1);color:var(--warn)}
+.deficit .sc-action{background:rgba(153,27,27,.1);color:var(--bad)}
+
+/* Metrics row */
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.metric{background:var(--card);border-radius:var(--r);border:1px solid var(--border);
+  padding:14px 12px;text-align:center;box-shadow:var(--sh)}
+.metric-val{font-size:24px;font-weight:800;color:var(--t1);letter-spacing:-.5px}
+.metric-lbl{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;
+  letter-spacing:.06em;margin-top:3px}
+
+/* Budget table */
+.table-card{background:var(--card);border-radius:var(--r-lg);border:1px solid var(--border);
+  overflow:hidden;margin-bottom:14px;box-shadow:var(--sh)}
+.table-ttl{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--t3);padding:16px 18px 12px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 18px;font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.06em;color:var(--t4);
+  background:var(--bg);border-top:1px solid var(--border)}
+td{padding:9px 18px;border-bottom:1px solid #f3f6f3}
+tr:last-child td{border-bottom:none}
+.td-cr{color:var(--ok);font-weight:600}
+.td-db{color:var(--bad);font-weight:600}
+.tr-tot td{font-weight:800;background:#f7faf7;border-top:1.5px solid var(--border)}
+.tr-tot:last-child td{font-size:14px}
+
+/* MRTN context */
+.mrtn-box{background:var(--blue-bg);border:1px solid #bfdbfe;
+  border-radius:var(--r);padding:13px 15px;margin-bottom:14px;
+  display:flex;gap:10px;align-items:flex-start}
+.mrtn-box svg{width:18px;height:18px;color:var(--blue);flex-shrink:0;margin-top:1px}
+.mrtn-txt{font-size:12px;color:#1e40af;line-height:1.5}
+.mrtn-txt strong{font-weight:700}
+
+/* Sources */
+details{background:var(--card);border-radius:var(--r-lg);border:1px solid var(--border);
+  overflow:hidden;margin-bottom:14px;box-shadow:var(--sh)}
+summary{padding:16px 18px;font-size:12px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--t3);cursor:pointer;
+  list-style:none;display:flex;align-items:center;justify-content:space-between}
+summary::after{content:'›';font-size:18px;color:var(--t4)}
+details[open] summary::after{content:'‹'}
+.sources-body{padding:0 18px 16px;font-size:12px;color:var(--t3);line-height:1.8}
+.sources-body a{color:var(--brand);text-decoration:none}
+.sources-body a:hover{text-decoration:underline}
+
+/* Print button */
+.print-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:13px;background:var(--card);
+  border:1.5px solid var(--border);border-radius:var(--r);
+  font-size:14px;font-weight:600;color:var(--t2);cursor:pointer;
+  margin-bottom:14px;box-shadow:var(--sh)}
+
+/* Footer */
+footer{text-align:center;font-size:11px;color:var(--t4);
+  padding:8px 16px 32px}
+footer a{color:var(--t3);text-decoration:none}
 </style>
 </head>
 <body>
 
 <header>
-  <h1>Acre Insights — N Manager</h1>
-  <p>In-season N management for irrigated corn</p>
+  <div class="hd-inner">
+    <div class="hd-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2C12 2 7 6 7 11a5 5 0 0 0 10 0C17 6 12 2 12 2z"/>
+        <line x1="12" y1="22" x2="12" y2="11"/>
+        <path d="M9 15 Q12 13 15 15"/>
+        <path d="M9.5 18.5 Q12 16.5 14.5 18.5"/>
+      </svg>
+    </div>
+    <div>
+      <div class="hd-tag">Acre Insights</div>
+      <div class="hd-title">N Manager</div>
+    </div>
+  </div>
+  <div class="hd-sub">Irrigated Corn · Mid-Season Nitrogen Sufficiency</div>
 </header>
 
 <div class="wrap">
 
-<div class="section">
-  <h2>Field Information</h2>
-  <div class="row2">
-    <div><label>Field Name</label><input type="text" id="fieldName" value="John Doe — North Pivot"></div>
-    <div><label>County</label><input type="text" id="county" value="Kearney" placeholder="e.g. Kearney"></div>
-    <div><label>State</label><input type="text" id="state" value="Nebraska" placeholder="e.g. Nebraska"></div>
-    <div><label>Yield Goal (bu/acre)</label><input type="number" id="yieldGoal" value="230" min="100" max="400"></div>
-    <div style="grid-column:1/-1;margin-top:4px">
-      <label>Field Location <span style="font-weight:400;color:#9ca3af">— tap map to auto-fill soil</span></label>
-      <div id="field-map" style="height:220px;border-radius:8px;border:1.5px solid #d1d5db;margin-top:6px;overflow:hidden;background:#e5e7eb"></div>
-      <div id="soil-chip" style="display:none;margin-top:8px;padding:10px 12px;border-radius:8px;border:1px solid #bbf7d0;background:#f0fdf4;font-size:12px;color:#166534;line-height:1.5"></div>
+<!-- ── FIELD PROFILE ────────────────────────────── -->
+<div class="card">
+  <div class="card-hd">
+    <div class="card-ico">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+      </svg>
     </div>
-    <div style="grid-column:1/-1">
-      <label>N factor <span style="font-weight:400;color:#9ca3af">(lb N / bu)</span></label>
-      <input type="hidden" id="nFactor" value="1.1">
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px" id="nFactor-pills">
-        <button type="button" onclick="setNFactor(0.6)" class="nf-pill">0.6</button>
-        <button type="button" onclick="setNFactor(0.7)" class="nf-pill">0.7</button>
-        <button type="button" onclick="setNFactor(0.8)" class="nf-pill">0.8</button>
-        <button type="button" onclick="setNFactor(0.9)" class="nf-pill">0.9</button>
-        <button type="button" onclick="setNFactor(1.0)" class="nf-pill">1.0</button>
-        <button type="button" onclick="setNFactor(1.1)" class="nf-pill nf-active">1.1</button>
-        <button type="button" onclick="setNFactor(1.2)" class="nf-pill">1.2</button>
-      </div>
+    <div><div class="card-ttl">Field Profile</div><div class="card-sub">Field identity, yield target &amp; soil</div></div>
+  </div>
+  <div class="grid2">
+    <div class="field"><label>Field Name</label><input type="text" id="fieldName" value="John Doe — North Pivot"></div>
+    <div class="field"><label>County</label><input type="text" id="county" value="Kearney"></div>
+  </div>
+  <div class="grid2">
+    <div class="field">
+      <label>Yield Goal (bu/ac)</label>
+      <input type="number" id="yieldGoal" value="230" min="100" max="400">
+      <div class="hint">N demand scales with yield target</div>
     </div>
-    <div><label>Soil OM (%)</label><input type="number" id="om" value="2.8" min="0.5" max="8" step="0.1"><div class="hint">OM × 20 = lb N/ac credit</div></div>
-    <div><label>Soil Residual NO₃-N (lb/ac)</label><input type="number" id="soilResidual" value="0" min="0" max="300"><div class="hint">0–24" pre-plant test. Leave 0 if untested.</div></div>
-    <div>
-      <label>Soil Texture</label>
-      <select id="soilTexture" onchange="updateTextureUI();calculate()">
-        <option value="sand">Sandy / Loamy Sand</option>
-        <option value="sandyLoam">Sandy Loam</option>
-        <option value="loam" selected>Loam / Silt Loam</option>
-        <option value="clayLoam">Clay Loam</option>
-        <option value="clay">Clay</option>
+    <div class="field">
+      <label>Soil OM (%)</label>
+      <input type="number" id="om" value="2.8" min="0.5" max="8" step="0.1">
+      <div class="hint">Mineralization credit varies by texture</div>
+    </div>
+  </div>
+  <div class="field">
+    <label>Soil Texture</label>
+    <select id="texture">
+      <option value="sandy">Sandy / Sandy Loam — High leach risk, low mineralization</option>
+      <option value="medium" selected>Medium / Silt Loam — Balanced leach &amp; mineralization</option>
+      <option value="fine">Fine / Clay Loam — Low leach, high denitrification risk</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Previous Crop</label>
+    <select id="prevCrop">
+      <option value="corn">Corn</option>
+      <option value="soy">Soybean (+50 lb N/ac credit)</option>
+      <option value="alfalfa">Alfalfa, 1st yr after (+80 lb N/ac credit)</option>
+      <option value="legcover">Legume Cover Crop (+25 lb N/ac credit)</option>
+      <option value="other">Other</option>
+    </select>
+  </div>
+  <div class="grid2">
+    <div class="field"><label>Planting Date</label><input type="date" id="plantDate" value="2026-05-02"></div>
+    <div class="field">
+      <label>Current Growth Stage</label>
+      <select id="stage">
+        <option value="VE-V3" data-pct="5">VE – V3 (Emergence)</option>
+        <option value="V4-V6" data-pct="10">V4 – V6</option>
+        <option value="V7-V9" data-pct="20">V7 – V9</option>
+        <option value="V10-V12" data-pct="35" selected>V10 – V12</option>
+        <option value="V13-V15" data-pct="55">V13 – V15</option>
+        <option value="V16-VT" data-pct="70">V16 – VT (Tassel)</option>
+        <option value="R1" data-pct="80">R1 — Silking</option>
+        <option value="R2" data-pct="88">R2 — Blister</option>
+        <option value="R3" data-pct="94">R3 — Milk</option>
+        <option value="R4" data-pct="98">R4 — Dough</option>
+        <option value="R5-R6" data-pct="100">R5–R6 (Black Layer)</option>
       </select>
     </div>
   </div>
-  <label>Previous Crop</label>
-  <select id="prevCrop">
-    <option value="corn">Corn</option>
-    <option value="soy">Soybean (+25 lb credit)</option>
-    <option value="other">Other</option>
-  </select>
-  <label>Planting Date</label>
-  <input type="date" id="plantDate" value="2026-05-02">
-  <label>Current Growth Stage</label>
-  <select id="stage">
-    <option value="VE-V3" data-pct="3">VE – V3 (Emergence – 3-leaf)</option>
-    <option value="V4-V6" data-pct="7">V4 – V6 (4 to 6-leaf)</option>
-    <option value="V7-V9" data-pct="14">V7 – V9 (7 to 9-leaf)</option>
-    <option value="V10-V12" data-pct="25" selected>V10 – V12 (10 to 12-leaf)</option>
-    <option value="V13-V15" data-pct="40">V13 – V15 (13 to 15-leaf)</option>
-    <option value="V16-VT" data-pct="52">V16 – VT (to Tassel)</option>
-    <option value="R1" data-pct="57">R1 – Silking</option>
-    <option value="R2" data-pct="70">R2 – Blister</option>
-    <option value="R3" data-pct="81">R3 – Milk</option>
-    <option value="R4" data-pct="91">R4 – Dough</option>
-    <option value="R5-R6" data-pct="100">R5 – R6 (Dent to Black Layer)</option>
-  </select>
 </div>
 
-<div class="section">
-  <h2>Nitrogen Applications</h2>
+<!-- ── NITROGEN APPLICATIONS ────────────────────── -->
+<div class="card">
+  <div class="card-hd">
+    <div class="card-ico">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22V12M5 12a7 7 0 0 1 14 0"/><circle cx="12" cy="7" r="3"/>
+      </svg>
+    </div>
+    <div><div class="card-ttl">Nitrogen Applications</div><div class="card-sub">All N sources applied this season</div></div>
+  </div>
+
   <div class="app-box">
-    <h3>Pre-plant</h3>
-    <div class="row2">
-      <div><label>Product</label>
+    <div class="app-box-hd"><span class="app-box-ttl">Pre-Plant</span></div>
+    <div class="grid2">
+      <div class="field"><label>Product</label>
         <select id="pp-prod">
           <option selected>Anhydrous Ammonia (82% N)</option>
           <option>UAN 28%</option><option>UAN 32%</option>
           <option>Urea (46% N)</option><option>AMS (21% N)</option><option>Other</option>
-        </select></div>
-      <div><label>Rate (lb N/acre)</label><input type="number" id="pp-rate" value="150" min="0" max="300"></div>
+        </select>
+      </div>
+      <div class="field"><label>Rate (lb N/ac)</label><input type="number" id="pp-rate" value="150" min="0" max="300"></div>
     </div>
-    <div style="margin-top:8px"><label>Application Date</label><input type="date" id="pp-date" style="width:100%;box-sizing:border-box"></div>
+    <div class="field"><label>Application Timing</label>
+      <div class="timing-row">
+        <div class="timing-opt"><input type="radio" name="pp-timing" id="pp-fall" value="fall"><label for="pp-fall">Fall Anhydrous<span class="timing-eff">92% efficiency</span></label></div>
+        <div class="timing-opt"><input type="radio" name="pp-timing" id="pp-spring" value="spring" checked><label for="pp-spring">Spring Pre-Plant<span class="timing-eff">97% efficiency</span></label></div>
+      </div>
+    </div>
   </div>
+
   <div class="app-box">
-    <h3>Sidedress</h3>
-    <div class="row2">
-      <div><label>Product</label>
+    <div class="app-box-hd"><span class="app-box-ttl">Sidedress</span></div>
+    <div class="grid2">
+      <div class="field"><label>Product</label>
         <select id="sd-prod">
           <option>Anhydrous Ammonia (82% N)</option><option selected>UAN 28%</option>
           <option>UAN 32%</option><option>Urea (46% N)</option><option>AMS (21% N)</option><option>Other</option>
-        </select></div>
-      <div><label>Rate (lb N/acre)</label><input type="number" id="sd-rate" value="45" min="0" max="300"></div>
+        </select>
+      </div>
+      <div class="field"><label>Rate (lb N/ac)</label><input type="number" id="sd-rate" value="45" min="0" max="300"></div>
     </div>
-    <div style="margin-top:8px"><label>Application Date</label><input type="date" id="sd-date" style="width:100%;box-sizing:border-box"></div>
+    <div class="hint" style="margin-top:6px">Sidedress = 100% efficiency (best timing)</div>
   </div>
+
   <div class="app-box">
-    <h3>Fertigation 1</h3>
-    <div class="row2">
-      <div><label>Product</label>
-        <select id="f1-prod">
-          <option selected>UAN 28%</option><option>UAN 32%</option>
-          <option>AMS (21% N)</option><option>Urea (46% N)</option><option>Other</option>
-        </select></div>
-      <div><label>Rate (lb N/acre)</label><input type="number" id="f1-rate" value="20" min="0" max="150"></div>
+    <div class="app-box-hd"><span class="app-box-ttl">Fertigation 1</span></div>
+    <div class="grid2">
+      <div class="field"><label>Product</label>
+        <select id="f1-prod"><option selected>UAN 28%</option><option>UAN 32%</option><option>AMS (21% N)</option><option>Urea (46% N)</option><option>Other</option></select>
+      </div>
+      <div class="field"><label>Rate (lb N/ac)</label><input type="number" id="f1-rate" value="20" min="0" max="150"></div>
     </div>
-    <div style="margin-top:8px"><label>Application Date</label><input type="date" id="f1-date" style="width:100%;box-sizing:border-box"></div>
   </div>
+
   <div class="app-box">
-    <h3>Fertigation 2 <span style="font-weight:400;font-size:12px;color:#9ca3af">(optional)</span></h3>
-    <div class="row2">
-      <div><label>Product</label>
-        <select id="f2-prod">
-          <option selected>UAN 28%</option><option>UAN 32%</option>
-          <option>AMS (21% N)</option><option>Urea (46% N)</option><option>Other</option>
-        </select></div>
-      <div><label>Rate (lb N/acre)</label><input type="number" id="f2-rate" value="0" min="0" max="150"></div>
+    <div class="app-box-hd"><span class="app-box-ttl">Fertigation 2</span><span class="opt-badge">Optional</span></div>
+    <div class="grid2">
+      <div class="field"><label>Product</label>
+        <select id="f2-prod"><option selected>UAN 28%</option><option>UAN 32%</option><option>AMS (21% N)</option><option>Urea (46% N)</option><option>Other</option></select>
+      </div>
+      <div class="field"><label>Rate (lb N/ac)</label><input type="number" id="f2-rate" value="0" min="0" max="150"></div>
     </div>
-    <div style="margin-top:8px"><label>Application Date</label><input type="date" id="f2-date" style="width:100%;box-sizing:border-box"></div>
   </div>
+
   <div class="app-box">
-    <h3>Fertigation 3 <span style="font-weight:400;font-size:12px;color:#9ca3af">(optional)</span></h3>
-    <div class="row2">
-      <div><label>Product</label>
-        <select id="f3-prod">
-          <option selected>UAN 28%</option><option>UAN 32%</option>
-          <option>AMS (21% N)</option><option>Urea (46% N)</option><option>Other</option>
-        </select></div>
-      <div><label>Rate (lb N/acre)</label><input type="number" id="f3-rate" value="0" min="0" max="150"></div>
+    <div class="app-box-hd"><span class="app-box-ttl">Fertigation 3</span><span class="opt-badge">Optional</span></div>
+    <div class="grid2">
+      <div class="field"><label>Product</label>
+        <select id="f3-prod"><option selected>UAN 28%</option><option>UAN 32%</option><option>AMS (21% N)</option><option>Urea (46% N)</option><option>Other</option></select>
+      </div>
+      <div class="field"><label>Rate (lb N/ac)</label><input type="number" id="f3-rate" value="0" min="0" max="150"></div>
     </div>
-    <div style="margin-top:8px"><label>Application Date</label><input type="date" id="f3-date" style="width:100%;box-sizing:border-box"></div>
   </div>
-  <div class="app-box" style="border-color:#f59e0b;background:#fffbeb">
-    <h3 style="color:#92400e">Post-VT <span style="font-weight:400;font-size:12px;color:#b45309">(R1–R3, grain protein fill)</span></h3>
-    <div class="row2">
-      <div><label>Product</label>
-        <select id="pvt-prod">
-          <option selected>UAN 28%</option><option>UAN 32%</option>
-          <option>AMS (21% N)</option><option>Urea (46% N)</option><option>Other</option>
-        </select></div>
-      <div><label>Rate (lb N/acre)</label><input type="number" id="pvt-rate" value="0" min="0" max="60"></div>
+</div>
+
+<!-- ── LOSS FACTORS ──────────────────────────────── -->
+<div class="card">
+  <div class="card-hd">
+    <div class="card-ico" style="background:#fff3cd">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+      </svg>
     </div>
-    <div style="margin-top:8px"><label>Application Date</label><input type="date" id="pvt-date" style="width:100%;box-sizing:border-box"></div>
-    <div style="margin-top:6px;font-size:11px;color:#92400e">Via pivot — supports grain fill and late-season protein.</div>
-  </div>
-</div>
-
-
-<button class="calc-btn" onclick="calculate()">Calculate</button>
-
-<div id="results">
-  <div id="banner" class="banner sufficient">
-    <div class="status-lbl" id="status-lbl">—</div>
-    <div class="big-num" id="big-num">—</div>
-    <div class="rec" id="rec-text"></div>
-    <div class="fert-rec" id="fert-rec"></div>
+    <div><div class="card-ttl">Loss Factors</div><div class="card-sub">Leaching, denitrification &amp; irrigation losses</div></div>
   </div>
 
-<div class="section" id="viz-gauge">
-  <h2>Season Outlook</h2>
-  <div id="gauge-view"></div>
-</div>
-
-<div id="weather-status" style="display:none;font-size:11px;color:#9ca3af;margin:6px 16px 0"></div>
-<div id="n-loss-breakdown" style="display:none;margin:10px 16px;padding:10px 12px;background:#fafafa;border-radius:8px;border:1px solid #e5e7eb"></div>
-<div style="margin:6px 16px 0">
-  <button onclick="var d=gv('how-calc');d.style.display=d.style.display==='none'?'block':'none';this.textContent=d.style.display==='none'?'▸ How is this calculated?':'▾ How is this calculated?'" style="background:none;border:none;color:#6b7280;font-size:11px;cursor:pointer;padding:2px 0">▸ How is this calculated?</button>
-  <div id="how-calc" style="display:none;margin-top:8px;padding:10px 12px;background:#f8fafc;border-radius:8px;border:1px solid #e5e7eb;font-size:12px;color:#374151;line-height:1.6">
-    <strong>Applied N</strong> — your entered rates for each application.<br><br>
-    <strong>Mineralization</strong> — OM% × 20 lb/ac seasonal estimate. (UNL EC117)<br><br>
-    <strong>Previous crop credit</strong> — 25 lb/ac for soybean. (UNL EC117)<br><br>
-    <strong>Losses</strong> — computed from actual season precip (Open-Meteo). Leaching triggers above the soil texture threshold (0.75"–2.5"); denitrification after 3+ saturated days.<br><br>
-    <strong>14-day forecast</strong> — bends the projection using the same loss model.<br><br>
-    <strong>50-year history</strong> — daily precip 1973–present, simulated through the loss model for your soil texture.
-  </div>
-</div>
-
-  <div class="section" id="hist-section" style="display:none">
-    <h2>50-Year History <button id="hist-toggle" onclick="toggleHist()" style="font-size:11px;font-weight:600;padding:3px 10px;border:1.5px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;margin-left:8px;text-transform:none;letter-spacing:0">Show</button></h2>
-    <div id="hist-table-wrap" style="display:none;overflow-x:auto;margin-top:8px">
-      <table id="hist-table" style="font-size:12px">
-        <thead><tr>
-          <th>Year</th>
-          <th style="text-align:right">Rain Events<br><span style="font-weight:400;font-size:10px">&gt;1.5"</span></th>
-          <th style="text-align:right">Season Precip<br><span style="font-weight:400;font-size:10px">inches</span></th>
-          <th style="text-align:right" id="hist-th-cur">N Rem. Now<br><span style="font-weight:400;font-size:10px">lb/ac</span></th>
-          <th style="text-align:right">N Rem. VT<br><span style="font-weight:400;font-size:10px">lb/ac</span></th>
-        </tr></thead>
-        <tbody id="hist-tbody"></tbody>
-      </table>
+  <div class="field">
+    <label>Leaching / Heavy Rain Events</label>
+    <div class="radio-set">
+      <label class="radio-item"><input type="radio" name="leach" value="0"><div><div class="radio-item-lbl">No loss events</div><div class="radio-item-sub">No significant rainfall or over-irrigation losses</div></div></label>
+      <label class="radio-item"><input type="radio" name="leach" value="1" checked><div><div class="radio-item-lbl">1 event — &gt;1.5" rain or heavy over-irrigation</div><div class="radio-item-sub">Sandy: ~18% loss &nbsp;·&nbsp; Medium: ~10% &nbsp;·&nbsp; Fine: ~5%</div></div></label>
+      <label class="radio-item"><input type="radio" name="leach" value="2"><div><div class="radio-item-lbl">2+ events — repeat leaching</div><div class="radio-item-sub">Loss doubled — significant N already depleted</div></div></label>
     </div>
   </div>
 
-  <div class="section">
-    <h2>N Budget</h2>
-    <table>
-      <thead><tr><th>Item</th><th style="text-align:right">lb N/ac</th></tr></thead>
-      <tbody id="tbody"></tbody>
-    </table>
-    <button class="print-btn" onclick="window.print()">Print / Save PDF</button>
+  <div class="field" style="margin-top:14px">
+    <label>Soil Saturation</label>
+    <label class="check-item">
+      <input type="checkbox" id="saturated">
+      <div><div class="radio-item-lbl">Soils saturated &gt;48 hours</div><div class="radio-item-sub">Sandy: +8% &nbsp;·&nbsp; Medium: +15% &nbsp;·&nbsp; Fine/Clay: +22%</div></div>
+    </label>
   </div>
 
-  <div class="section" style="font-size:13px">
-    <h2>Science Basis</h2>
-    <p style="margin-bottom:8px">UNL Extension EC117 &nbsp;·&nbsp; ISU MRTN (Sawyer et al.) &nbsp;·&nbsp; Bender et al. 2013 (Agronomy Journal) &nbsp;·&nbsp; Ciampitti &amp; Vyn 2013 (Crop Science) &nbsp;·&nbsp; KSU MF-1005 &nbsp;·&nbsp; USDA-NRCS</p>
-    <p style="color:#6b7280">Estimates only — consult a CCA for site-specific advice.</p>
+  <div class="field" style="margin-top:14px">
+    <label>Irrigation Excess (Beyond Crop Need)</label>
+    <div class="radio-set">
+      <label class="radio-item"><input type="radio" name="irrigexcess" value="0" checked><div><div class="radio-item-lbl">No excess irrigation</div><div class="radio-item-sub">Irrigation managed to crop ET — minimal leaching</div></div></label>
+      <label class="radio-item"><input type="radio" name="irrigexcess" value="1"><div><div class="radio-item-lbl">Moderate excess (1–2" over ET)</div><div class="radio-item-sub">Additional 8% N leaching loss</div></div></label>
+      <label class="radio-item"><input type="radio" name="irrigexcess" value="2"><div><div class="radio-item-lbl">Heavy excess (&gt;2" over ET)</div><div class="radio-item-sub">Additional 15% N leaching loss</div></div></label>
+    </div>
   </div>
 </div>
 
-<div id="chart-tip"></div>
-<footer>Acre Insights &nbsp;·&nbsp; ryan@acreinsights.com</footer>
+<button class="cta" onclick="calculate()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+  Calculate N Status
+</button>
+
+<!-- ── RESULTS ────────────────────────────────────── -->
+<div id="results" style="display:none">
+
+  <div id="status-card" class="status-card sufficient">
+    <div class="sc-top">
+      <div id="sc-badge" class="sc-badge">N Sufficient</div>
+    </div>
+    <div id="sc-num" class="sc-num"><span class="sc-unit">+</span>0 <span style="font-size:20px;font-weight:600">lb N/ac</span></div>
+    <div id="sc-rec" class="sc-rec">—</div>
+    <div id="sc-action" class="sc-action">—</div>
+  </div>
+
+  <div class="metrics">
+    <div class="metric"><div class="metric-val" id="m-demand">—</div><div class="metric-lbl">Season Demand</div></div>
+    <div class="metric"><div class="metric-val" id="m-avail">—</div><div class="metric-lbl">N Available</div></div>
+    <div class="metric"><div class="metric-val" id="m-remain">—</div><div class="metric-lbl">Remaining Need</div></div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-ttl">N Budget Breakdown</div>
+    <table><thead><tr><th>Item</th><th style="text-align:right">lb N/ac</th></tr></thead>
+    <tbody id="tbody"></tbody></table>
+  </div>
+
+  <div id="mrtn-box" class="mrtn-box" style="display:none">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div class="mrtn-txt" id="mrtn-txt"></div>
+  </div>
+
+  <button class="print-btn" onclick="window.print()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+    Save as PDF / Print Report
+  </button>
+
+  <details>
+    <summary>Science Basis &amp; Sources</summary>
+    <div class="sources-body">
+      <strong>N Demand:</strong> Yield goal × N factor (1.0–1.10 lb N/bu based on yield target). Modern high-yielding hybrids (>240 bu/ac) require ~10% more N per bushel (Haegele et al., 2013; Below et al.).<br><br>
+      <strong>N Uptake Curve:</strong> Bender, Haegele, Ruffo &amp; Below (2013). <em>Agronomy Journal</em> 105:161–170. Cumulative uptake by growth stage: VE-V3=5%, V4-V6=10%, V7-V9=20%, V10-V12=35%, V13-V15=55%, V16-VT=70%, R1=80%, R2=88%, R3=94%, R4=98%, R5-R6=100%.<br><br>
+      <strong>OM Mineralization:</strong> Sandy: 14 lb N/% OM; Medium: 20 lb N/% OM; Fine: 26 lb N/% OM. USDA-NRCS / UNL EC117 / ISU PM2015.<br><br>
+      <strong>Leaching Losses:</strong> Loss per heavy rain event by soil texture: Sandy ~18%, Medium ~10%, Fine ~5%. ISU Extension; <em>Crops.extension.iastate.edu</em>; UNL CropWatch 2022.<br><br>
+      <strong>Denitrification:</strong> Saturation >48 hr: Sandy +8%, Medium +15%, Fine +22%. UNL CropWatch; Bayer Crop Science field research; ISU Integrated Crop Management.<br><br>
+      <strong>MRTN:</strong> Sawyer, Nafziger, Randall, Bundy, Rehm &amp; Joern (2006). Iowa State University PM2015. Current MRTN ranges: C/Sb $4.50/bu = 130–165 lb N/ac, C/C = 165–200 lb N/ac.<br><br>
+      <strong>Application Timing Efficiency:</strong> Fall anhydrous 92%; Spring pre-plant 97%; Sidedress &amp; fertigation 100%. UNL EC117; Melvin &amp; Schepers (1995).<br><br>
+      <em>Estimates only. Consult a licensed CCA for site-specific recommendations.</em>
+    </div>
+  </details>
+
 </div>
+</div>
+
+<footer>Acre Insights &nbsp;·&nbsp; <a href="mailto:ryan@acreinsights.com">ryan@acreinsights.com</a></footer>
 
 <script>
-// Soil texture → leaching & denitrification parameters
-// leachThresh: rain (in) above which leaching starts
-// leachMax: max fraction of available N lost per leaching event
-// leachRate: scaling factor (lost = min(leachMax, (p-thresh)*leachRate) * avail)
-// denitrDays: consecutive sat-days to trigger denitrification
-// denitrRate: fraction of avail N lost per denitrification day
-var TEXTURES = {
-  //                          --- weather sim ---                          --- manual inputs ---           -- mineral --
-  //                 thresh  max    rate  dDays dRate    leach1% leach2%  sat%   minMult
-  sand:     {leachThresh:0.75, leachMax:0.35, leachRate:0.15, denitrDays:4, denitrRate:0.015, leach1Pct:20, leach2Pct:35, satPct:6,  minMult:0.75},
-  sandyLoam:{leachThresh:1.0,  leachMax:0.25, leachRate:0.11, denitrDays:3, denitrRate:0.020, leach1Pct:14, leach2Pct:25, satPct:10, minMult:0.88},
-  loam:     {leachThresh:1.5,  leachMax:0.20, leachRate:0.09, denitrDays:3, denitrRate:0.025, leach1Pct:10, leach2Pct:20, satPct:15, minMult:1.00},
-  clayLoam: {leachThresh:2.0,  leachMax:0.12, leachRate:0.06, denitrDays:2, denitrRate:0.035, leach1Pct:6,  leach2Pct:12, satPct:22, minMult:1.10},
-  clay:     {leachThresh:2.5,  leachMax:0.08, leachRate:0.04, denitrDays:2, denitrRate:0.045, leach1Pct:4,  leach2Pct:8,  satPct:28, minMult:1.15}
-};
-
-// N uptake curve based on Ciampitti & Vyn (2013) / Bender et al. for modern high-yield hybrids:
-// 43% post-VT/R1, 57% pre-VT — materially more post-silking demand than Hanway (1962) legacy curve
 var STAGES = [
-  {v:'VE-V3',l:'VE-V3',pct:3},{v:'V4-V6',l:'V4-V6',pct:7},
-  {v:'V7-V9',l:'V7-V9',pct:14},{v:'V10-V12',l:'V10-V12',pct:25},
-  {v:'V13-V15',l:'V13-V15',pct:40},{v:'V16-VT',l:'V16-VT',pct:52},
-  {v:'R1',l:'R1',pct:57},{v:'R2',l:'R2',pct:70},
-  {v:'R3',l:'R3',pct:81},{v:'R4',l:'R4',pct:91},
-  {v:'R5-R6',l:'R5-R6',pct:100}
+  {v:'VE-V3',l:'VE–V3',pct:5},{v:'V4-V6',l:'V4–V6',pct:10},
+  {v:'V7-V9',l:'V7–V9',pct:20},{v:'V10-V12',l:'V10–V12',pct:35},
+  {v:'V13-V15',l:'V13–V15',pct:55},{v:'V16-VT',l:'V16–VT',pct:70},
+  {v:'R1',l:'R1',pct:80},{v:'R2',l:'R2',pct:88},
+  {v:'R3',l:'R3',pct:94},{v:'R4',l:'R4',pct:98},
+  {v:'R5-R6',l:'R5–R6',pct:100}
 ];
 
-function gv(id) { return document.getElementById(id); }
-function num(id) { return parseFloat(gv(id).value) || 0; }
+// Texture-specific parameters
+var TEXTURE = {
+  sandy:  {minerMult:14, leachPct:18, satPct:8},
+  medium: {minerMult:20, leachPct:10, satPct:15},
+  fine:   {minerMult:26, leachPct:5,  satPct:22}
+};
 
-function updateTextureUI(){
-  // No manual loss labels to update — losses are model-driven
-}
+// Application timing efficiency
+var TIMING_EFF = {fall:0.92, spring:0.97};
 
-function calculate() {
-  var yg = num('yieldGoal');
-  var stageEl = gv('stage');
-  var stagePct = parseInt(stageEl.options[stageEl.selectedIndex].getAttribute('data-pct')) || 0;
-  var stageVal = stageEl.value;
+function gv(id){return document.getElementById(id);}
+function num(id){return parseFloat(gv(id).value)||0;}
+
+function calculate(){
+  var yg       = num('yieldGoal');
+  var texture  = gv('texture').value;
+  var om       = num('om');
   var prevCrop = gv('prevCrop').value;
-  var om = num('om');
+  var stageEl  = gv('stage');
+  var stagePct = parseInt(stageEl.options[stageEl.selectedIndex].getAttribute('data-pct'))||0;
+  var stageVal = stageEl.value;
+
+  // N rates
   var ppRate = num('pp-rate');
   var sdRate = num('sd-rate');
-  var f1 = num('f1-rate');
-  var f2 = num('f2-rate');
-  var f3 = num('f3-rate');
-  var tex = TEXTURES[gv('soilTexture').value] || TEXTURES.loam;
+  var f1 = num('f1-rate'), f2 = num('f2-rate'), f3 = num('f3-rate');
 
-  var nFactor = Math.max(0.5, Math.min(1.4, num('nFactor') || 1.1));
+  // Timing efficiency for pre-plant
+  var ppTiming = document.querySelector('input[name=pp-timing]:checked');
+  var ppEff = ppTiming ? TIMING_EFF[ppTiming.value] || 0.97 : 0.97;
+
+  // Loss factors
+  var leachEvents = parseInt(document.querySelector('input[name=leach]:checked').value)||0;
+  var sat  = gv('saturated').checked;
+  var irrig = parseInt(document.querySelector('input[name=irrigexcess]:checked').value)||0;
+
+  var tx = TEXTURE[texture] || TEXTURE.medium;
+
+  // ── N DEMAND ──────────────────────────────────────
+  // Modern hybrids: higher N factor at high yield targets
+  var nFactor = yg <= 180 ? 1.0 : yg <= 240 ? 1.05 : 1.10;
   var demand = yg * nFactor;
-  var omCredit = om * 20 * tex.minMult;
-  var prevCredit = prevCrop === 'soy' ? 25 : 0;
-  var soilResidual = num('soilResidual');
-  var appliedN = ppRate + sdRate + f1 + f2 + f3;
-  // Auto loss: use weather-computed lm if available, otherwise texture median
-  var lossPct = _weatherLossPct !== null ? _weatherLossPct : tex.leach1Pct;
-  var losses = appliedN * lossPct / 100;
-  var totalAvail = appliedN + omCredit + prevCredit + soilResidual - losses;
+
+  // ── CREDITS ───────────────────────────────────────
+  var omCredit = om * tx.minerMult;
+  var prevCredit = {corn:0, soy:50, alfalfa:80, legcover:25, other:0}[prevCrop] || 0;
+
+  // ── APPLIED N (with timing efficiency) ───────────
+  var ppN  = ppRate  * ppEff;
+  var sdN  = sdRate  * 1.0;
+  var f1N  = f1 * 1.0;
+  var f2N  = f2 * 1.0;
+  var f3N  = f3 * 1.0;
+  var appliedN = ppN + sdN + f1N + f2N + f3N;
+  var rawApplied = ppRate + sdRate + f1 + f2 + f3;
+
+  // ── LOSSES ────────────────────────────────────────
+  var leachPctPerEvent = tx.leachPct;
+  var leachLoss = appliedN * (leachEvents * leachPctPerEvent / 100);
+  var satLoss   = sat  ? appliedN * (tx.satPct / 100) : 0;
+  var irrigLoss = irrig === 1 ? appliedN * 0.08 :
+                  irrig === 2 ? appliedN * 0.15 : 0;
+
+  var totalLoss = leachLoss + satLoss + irrigLoss;
+  // Cap at 55% of applied
+  if (totalLoss > appliedN * 0.55) totalLoss = appliedN * 0.55;
+
+  // ── TOTALS ────────────────────────────────────────
+  var totalAvail  = appliedN + omCredit + prevCredit - totalLoss;
   var uptakeToDate = demand * stagePct / 100;
-  var remaining = totalAvail - uptakeToDate;
-  var stillNeeded = demand * (1 - stagePct / 100);
-  var surplus = remaining - stillNeeded;
+  var remaining    = totalAvail - uptakeToDate;
+  var stillNeeded  = demand * (1 - stagePct / 100);
+  var surplus      = remaining - stillNeeded;
 
-  var cls, lbl, rec, fertRec = '';
-  if (surplus >= 30)       { cls='sufficient';  lbl='N Sufficient';         rec='No additional N needed.'; }
-  else if (surplus >= 10)  { cls='marginal';    lbl='Marginal';             rec='Consider a light fertigation pass.'; fertRec='Suggested: 15–20 lb/ac'; }
-  else if (surplus >= 0)   { cls='borderline';  lbl='Tight';                rec='Fertigation recommended.'; fertRec='Suggested: 20–30 lb/ac'; }
-  else { cls='deficit'; lbl='N Short'; rec='Apply N now.';
-    fertRec = 'Apply ' + Math.round(Math.abs(surplus)+15) + ' lb/ac ASAP'; }
+  // ── STATUS ────────────────────────────────────────
+  var cls, lbl, rec, action;
+  if (surplus >= 30) {
+    cls='sufficient'; lbl='N Sufficient';
+    rec='Nitrogen looks adequate to finish the season. No fertigation needed at this time.';
+    action='✓ No action needed';
+  } else if (surplus >= 15) {
+    cls='marginal'; lbl='Marginal';
+    rec='Nitrogen is marginal. A light fertigation may be justified if corn is above $4.50/bu.';
+    action='Consider: 15–20 lb N/ac via UAN or AMS';
+  } else if (surplus >= 0) {
+    cls='borderline'; lbl='Borderline Deficient';
+    rec='Nitrogen is borderline deficient. Fertigation is recommended to avoid yield loss.';
+    action='Recommended: 20–30 lb N/ac via UAN or AMS';
+  } else {
+    cls='deficit'; lbl='N Deficient';
+    var fertAmt = Math.min(40, Math.round(Math.abs(surplus) + 15));
+    rec='Crop is nitrogen deficient. Fertigation is strongly recommended — apply as soon as possible.';
+    action='Apply ASAP: ' + fertAmt + ' lb N/ac via UAN or AMS';
+  }
 
-  var banner = gv('banner');
-  banner.className = 'banner ' + cls;
-  gv('status-lbl').textContent = lbl;
-  gv('big-num').textContent = (surplus >= 0 ? '+' : '') + surplus.toFixed(0) + ' lb N/acre';
-  gv('rec-text').textContent = rec;
-  gv('fert-rec').textContent = fertRec;
-  gv('fert-rec').style.display = fertRec ? '' : 'none';
+  // ── UPDATE STATUS CARD ────────────────────────────
+  var sc = gv('status-card');
+  sc.className = 'status-card ' + cls;
+  gv('sc-badge').textContent = lbl;
+  var sign = surplus >= 0 ? '+' : '';
+  gv('sc-num').innerHTML = '<span class="sc-unit">' + sign + '</span>' +
+    Math.abs(surplus).toFixed(0) + ' <span style="font-size:20px;font-weight:600">lb N/ac</span>';
+  gv('sc-rec').textContent = rec;
+  var sca = gv('sc-action');
+  sca.textContent = action;
+  sca.className = 'sc-action';
 
+  // ── METRICS ───────────────────────────────────────
+  gv('m-demand').textContent  = Math.round(demand);
+  gv('m-avail').textContent   = Math.round(totalAvail);
+  gv('m-remain').textContent  = Math.round(stillNeeded);
+
+  // ── BUDGET TABLE ──────────────────────────────────
   var rows = [];
-  rows.push({l:'Total N Demand', v:demand.toFixed(0), c:''});
-  if (prevCrop==='soy') rows.push({l:'Prev. Crop Credit', v:'+25', c:'cr'});
-  rows.push({l:'Mineralization', v:'+'+omCredit.toFixed(0), c:'cr'});
-  if (soilResidual>0) rows.push({l:'Soil Residual', v:'+'+soilResidual.toFixed(0), c:'cr'});
-  if (ppRate>0) rows.push({l:'Pre-plant', v:'+'+ppRate.toFixed(0), c:'cr'});
-  if (sdRate>0) rows.push({l:'Sidedress', v:'+'+sdRate.toFixed(0), c:'cr'});
-  if (f1>0) rows.push({l:'Fertigation 1', v:'+'+f1.toFixed(0), c:'cr'});
-  if (f2>0) rows.push({l:'Fertigation 2', v:'+'+f2.toFixed(0), c:'cr'});
-  if (f3>0) rows.push({l:'Fertigation 3', v:'+'+f3.toFixed(0), c:'cr'});
-  if (losses>0) rows.push({l:'Weather Losses', v:'-'+losses.toFixed(0), c:'db'});
-  rows.push({l:'Total Available', v:totalAvail.toFixed(0), c:'', tot:true});
-  rows.push({l:'Used by Crop', v:'-'+uptakeToDate.toFixed(0), c:'db'});
-  rows.push({l:'Remaining', v:remaining.toFixed(0), c:''});
-  rows.push({l:'Still Needed', v:'-'+stillNeeded.toFixed(0), c:'db'});
-  rows.push({l:'Surplus / (Deficit)', v:(surplus>=0?'+':'')+surplus.toFixed(0), c:surplus>=0?'cr':'db', tot:true});
+  rows.push({l:'Total Crop N Demand', v:Math.round(demand), c:''});
+  if (prevCredit > 0) rows.push({l:'Previous Crop Credit ('+{soy:'Soy',alfalfa:'Alfalfa',legcover:'Cover Crop'}[prevCrop]+')', v:'+'+prevCredit, c:'td-cr'});
+  rows.push({l:'OM Mineralization ('+(texture)+' soil)', v:'+'+Math.round(omCredit), c:'td-cr'});
+  if (ppRate > 0) rows.push({l:'Pre-Plant ('+Math.round(ppEff*100)+'% eff.)', v:'+'+Math.round(ppN), c:'td-cr'});
+  if (sdRate > 0) rows.push({l:'Sidedress (100% eff.)', v:'+'+Math.round(sdN), c:'td-cr'});
+  if (f1 > 0) rows.push({l:'Fertigation 1', v:'+'+f1, c:'td-cr'});
+  if (f2 > 0) rows.push({l:'Fertigation 2', v:'+'+f2, c:'td-cr'});
+  if (f3 > 0) rows.push({l:'Fertigation 3', v:'+'+f3, c:'td-cr'});
+  if (leachLoss > 0) rows.push({l:'Leaching Loss ('+leachEvents+' event'+(leachEvents>1?'s':'')+')', v:'−'+Math.round(leachLoss), c:'td-db'});
+  if (satLoss > 0)   rows.push({l:'Denitrification Loss (saturation)', v:'−'+Math.round(satLoss), c:'td-db'});
+  if (irrigLoss > 0) rows.push({l:'Irrigation Excess Loss', v:'−'+Math.round(irrigLoss), c:'td-db'});
+  rows.push({l:'Total N Available', v:Math.round(totalAvail), c:'', tot:true});
+  rows.push({l:'N Uptake to Date ('+stageVal+')', v:'−'+Math.round(uptakeToDate), c:'td-db'});
+  rows.push({l:'N Remaining in System', v:Math.round(remaining), c:''});
+  rows.push({l:'N Still Required', v:'−'+Math.round(stillNeeded), c:'td-db'});
+  rows.push({l:'Surplus / (Deficit)', v:sign+Math.round(surplus), c:surplus>=0?'td-cr':'td-db', tot:true, big:true});
 
   var html = '';
-  for (var i=0; i<rows.length; i++) {
-    var r = rows[i];
-    var cls2 = r.tot ? ' class="tot"' : '';
-    var fw = r.tot ? 'font-weight:700;' : '';
-    var col = r.c==='cr' ? 'color:#2d6a2d' : r.c==='db' ? 'color:#c0392b' : '';
-    html += '<tr'+cls2+'><td style="'+fw+'">'+r.l+'</td><td style="text-align:right;'+fw+col+'">'+r.v+'</td></tr>';
-  }
+  rows.forEach(function(r){
+    var tc = r.tot ? ' class="tr-tot"' : '';
+    var fs = r.big ? 'font-size:14px;' : '';
+    html += '<tr'+tc+'><td style="'+fs+'">'+r.l+'</td><td style="text-align:right;'+fs+'" class="'+r.c+'">'+r.v+'</td></tr>';
+  });
   gv('tbody').innerHTML = html;
 
-  gv('results').style.display = 'block';
+  // ── MRTN CONTEXT ──────────────────────────────────
+  var mrtnLow  = prevCrop === 'soy' ? 130 : 165;
+  var mrtnHigh = prevCrop === 'soy' ? 165 : 200;
+  var mrtnBox  = gv('mrtn-box');
+  mrtnBox.style.display = 'flex';
+  gv('mrtn-txt').innerHTML = '<strong>MRTN Reference:</strong> At $4.50/bu corn, ' +
+    'maximum return to nitrogen for corn after ' +
+    (prevCrop === 'soy' ? 'soybean' : 'corn') + ' is typically ' +
+    mrtnLow + '–' + mrtnHigh + ' lb N/ac (ISU MRTN / Sawyer et al.). ' +
+    'Your total applied N: <strong>' + rawApplied + ' lb N/ac</strong>.';
 
-  _weatherLossPct=null; // reset; weather fetch will update once actual precip loads
-  drawChart(demand, totalAvail, stagePct, stageVal, surplus);
-  fetchWeatherBands();
+  // ── SHOW RESULTS ──────────────────────────────────
+  gv('results').style.display = 'block';
   gv('results').scrollIntoView({behavior:'smooth'});
 }
 
-var _chart=null, _weatherLossPct=null;
-
-function drawChart(demand, totalAvail, stagePct, stageVal, surplus) {
-  var n=STAGES.length;
-  var curIdx=0;
-  for(var i=0;i<n;i++){if(STAGES[i].v===stageVal){curIdx=i;break;}}
-  var vtTarget=demand*0.43;
-  var ppR=num('pp-rate'),sdR=num('sd-rate'),f1R=num('f1-rate'),f2R=num('f2-rate'),f3R=num('f3-rate'),pvtR=num('pvt-rate');
-  var texD=TEXTURES[gv('soilTexture').value]||TEXTURES.loam;
-  var omCr=num('om')*20*texD.minMult, prevCr=gv('prevCrop').value==='soy'?25:0;
-  var soilRes=num('soilResidual');
-  var lossP=_weatherLossPct!==null?_weatherLossPct:texD.leach1Pct;
-  var lm=1-lossP/100;
-  var appPool={0:(ppR+omCr+prevCr)*lm+soilRes};
-  if(sdR>0)appPool[2]=sdR*lm;
-  if(f1R>0)appPool[3]=f1R*lm;
-  if(f2R>0)appPool[4]=f2R*lm;
-  if(f3R>0)appPool[5]=f3R*lm;
-  // Post-VT via fertigation — full efficiency, supports grain protein fill (R2)
-  if(pvtR>0)appPool[7]=pvtR*lm;
-  var stagPool=0;
-  var stagedRemVals=STAGES.map(function(s,i){if(appPool[i])stagPool+=appPool[i];return stagPool-demand*s.pct/100;});
-  var today=new Date().toISOString().split('T')[0];
-  function appDate(id){return gv(id)?gv(id).value||null:null;}
-  function fmtDate(d){if(!d)return null;var p=d.split('-');return (parseInt(p[1]))+'/'+parseInt(p[2]);}
-  function isPast(d){return d&&d<=today;}
-  var appMarkers=[];
-  if(ppR>0)appMarkers.push({idx:0,raw:ppR,label:'Pre-plant',date:appDate('pp-date')});
-  if(sdR>0)appMarkers.push({idx:2,raw:sdR,label:'Sidedress',date:appDate('sd-date')});
-  if(f1R>0)appMarkers.push({idx:3,raw:f1R,label:'Fert 1',date:appDate('f1-date')});
-  if(f2R>0)appMarkers.push({idx:4,raw:f2R,label:'Fert 2',date:appDate('f2-date')});
-  if(f3R>0)appMarkers.push({idx:5,raw:f3R,label:'Fert 3',date:appDate('f3-date')});
-  if(pvtR>0)appMarkers.push({idx:7,raw:pvtR,label:'Post-VT',date:appDate('pvt-date'),postVT:true});
-
-  _chart={demand:demand,totalAvail:totalAvail,surplus:surplus,stagedRemVals:stagedRemVals,
-    appPool:appPool,curIdx:curIdx,vtTarget:vtTarget,appMarkers:appMarkers,
-    _rawRates:{pp:ppR,sd:sdR,f1:f1R,f2:f2R,f3:f3R,pvt:pvtR,omCr:omCr,prevCr:prevCr,soilRes:soilRes},
-    _texD:texD,
-    _planLossPct:lossP,
-    _appliedN:ppR+sdR+f1R+f2R+f3R+pvtR,
-    _sources:{prePlant:Math.round(ppR),sidedress:Math.round(sdR),fert1:Math.round(f1R),fert2:Math.round(f2R),fert3:Math.round(f3R),mineralization:Math.round(omCr),prevCrop:Math.round(prevCr),soilResidual:Math.round(soilRes),inputLosses:Math.round((ppR+sdR+f1R+f2R+f3R)*lossP/100)}};
-
-  // App legend
-  var legEl=gv('app-legend');
-  if(legEl){
-    legEl.innerHTML=appMarkers.map(function(m,i){
-      return '<span style="font-size:12px;color:#374151;display:flex;align-items:center;gap:4px">'
-        +'<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#2d6a2d;color:#fff;font-size:10px;font-weight:700;flex-shrink:0">'+(i+1)+'</span>'
-        +m.label+' <strong>+'+m.raw+' lb</strong></span>';
-    }).join('');
-    legEl.style.display=appMarkers.length?'flex':'none';
-  }
-
-  _updateVisuals();
-}
-
-function _updateVisuals(){
-  var d=_chart; if(!d)return;
-  _renderGauge(d);
-}
-
-function _renderTimeline(d){
-  var el=gv('milestone-view'); if(!el)return;
-  var sv=d.stagedRemVals, ci=d.curIdx, vt=d.vtTarget, demand=d.demand;
-  var maxVal=Math.max.apply(null,sv.map(function(v){return Math.max(0,v);}));
-
-  // Colors
-  function dotColor(v,si){
-    if(si>ci) return v>vt*0.5?'#9ca3af':'#fca5a5'; // future: gray or warn
-    return v>30?'#16a34a':v>0?'#f59e0b':'#dc2626';
-  }
-  function dotBg(v,si){
-    if(si>ci) return v>vt*0.5?'#f3f4f6':'#fff5f5';
-    return v>30?'#f0fdf4':v>0?'#fffbeb':'#fff5f5';
-  }
-
-  // Stage labels — compact
-  var lbls=['VE-V3','V4-V6','V7-V9','V10-V12','V13-V15','V16-VT','R1','R2','R3','R4','R5-R6'];
-
-  var dotSize=36, connH=3, totalW=lbls.length*56;
-  var html='<div style="position:relative;min-width:'+totalW+'px;padding:8px 0 28px">';
-
-  // Connector line
-  html+='<div style="position:absolute;top:'+(dotSize/2+8)+'px;left:28px;right:28px;height:'+connH+'px;background:#e5e7eb;border-radius:2px"></div>';
-
-  // Progress fill up to curIdx
-  var fillPct=(ci/(STAGES.length-1))*100;
-  html+='<div style="position:absolute;top:'+(dotSize/2+8)+'px;left:28px;width:calc('+fillPct+'% * (100% - 56px) / 100);height:'+connH+'px;background:#16a34a;border-radius:2px"></div>';
-
-  html+='<div style="display:flex;justify-content:space-between;position:relative">';
-  STAGES.forEach(function(s,si){
-    var v=Math.round(sv[si]||0);
-    var isCur=si===ci, isPast=si<ci, isFut=si>ci;
-    var isVT=si===6;
-    var dc=dotColor(v,si), dbg=dotBg(v,si);
-    var size=isCur?44:dotSize;
-    var border=isCur?'3px solid '+dc:'2px solid '+(isPast?dc:'#d1d5db');
-    var bgStyle=isCur?dc:(isPast?dbg:'#f9fafb');
-    var textColor=isCur?'#fff':(isPast?dc:'#9ca3af');
-
-    var topPad=(isCur?0:4)+'px';
-    html+='<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;padding-top:'+topPad+'">';
-
-    // Application marker above dot
-    var appHere=d.appMarkers?d.appMarkers.filter(function(m){return m.idx===si;}):[];
-    if(appHere.length){
-      html+='<div style="font-size:9px;font-weight:700;color:#2d6a2d;white-space:nowrap">+'+appHere.map(function(m){return m.raw;}).join('+')+'</div>';
-    } else {
-      html+='<div style="height:14px"></div>';
-    }
-
-    // Dot
-    html+='<div style="width:'+size+'px;height:'+size+'px;border-radius:50%;border:'+border+';background:'+bgStyle+';display:flex;align-items:center;justify-content:center;flex-direction:column;box-shadow:'+(isCur?'0 0 0 4px rgba(22,163,74,0.15)':'none')+'">';
-    html+='<span style="font-size:'+(isCur?13:10)+'px;font-weight:800;color:'+textColor+';line-height:1">'+v+'</span>';
-    if(isCur) html+='<span style="font-size:8px;color:rgba(255,255,255,0.85);font-weight:600">lb</span>';
-    html+='</div>';
-
-    // Stage label
-    var labelStyle='font-size:9px;font-weight:'+(isCur||isVT?'700':'500')+';color:'+(isCur?dc:isVT?'#1a56a0':'#9ca3af')+';margin-top:4px;white-space:nowrap';
-    html+='<div style="'+labelStyle+'">'+lbls[si]+(isVT?' ★':'')+'</div>';
-
-    // NOW label
-    if(isCur) html+='<div style="font-size:8px;font-weight:800;color:#f59e0b;text-transform:uppercase;letter-spacing:0.05em">NOW</div>';
-    else html+='<div style="height:12px"></div>';
-
-    html+='</div>';
-  });
-  html+='</div></div>';
-  el.innerHTML=html;
-}
-
-function _renderGauge(d){
-  var el=gv('gauge-view'); if(!el)return;
-  var sv=d.stagedRemVals, ci=d.curIdx, demand=d.demand;
-  var curRemaining=Math.round(sv[ci]||0);
-  var html='';
-
-  // VT / tassel date prediction banner
-  var vtDate=d._vtDate||null, vtDaysOut=d._vtDaysOut||null, accumGDU=d._accumGDU||null;
-  if(vtDate&&vtDate!=='reached'){
-    html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;margin-bottom:12px">';
-    html+='<div style="font-size:22px">&#127807;</div>';
-    html+='<div>';
-    html+='<div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.05em">Tassel (VT) Predicted</div>';
-    html+='<div style="font-size:18px;font-weight:800;color:#78350f">'+vtDate+(vtDaysOut?' <span style="font-size:12px;font-weight:500;color:#b45309">('+vtDaysOut+' days)</span>':'')+'</div>';
-    if(accumGDU!==null) html+='<div style="font-size:10px;color:#b45309">'+accumGDU+' GDU accumulated &middot; 1,300 needed</div>';
-    html+='</div></div>';
-  } else if(vtDate==='reached'){
-    html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;margin-bottom:12px">';
-    html+='<div style="font-size:22px">&#127807;</div>';
-    html+='<div><div style="font-size:11px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.05em">Tassel Reached</div>';
-    if(accumGDU!==null) html+='<div style="font-size:10px;color:#16a34a">'+accumGDU+' GDU &mdash; at or past tassel</div>';
-    html+='</div></div>';
-  }
-
-  // ── Season Adjustment Hero ───────────────────────────────────────────────
-  // Compares actual weather losses vs what the plan assumed (texture default %)
-  if(_weatherLossPct!==null&&d._planLossPct!==undefined&&d._appliedN!==undefined){
-    var planLossPct=d._planLossPct;
-    var actualLossPct=_weatherLossPct;
-    var appliedN=d._appliedN;
-    var planLossLb=appliedN*planLossPct/100;
-    var actualLossLb=appliedN*actualLossPct/100;
-    var extraLostVsPlan=Math.round(actualLossLb-planLossLb);
-    // extraLostVsPlan > 0: more was lost than assumed → add to remaining passes
-    // extraLostVsPlan < 0: less was lost → can trim remaining passes
-
-    var isShort=d.surplus<10; // short or tight
-    var adjBg,adjBorder,adjLeftBorder,adjColor,adjHero,adjSub,adjRec;
-    if(Math.abs(extraLostVsPlan)<=8){
-      adjBg='#f0fdf4'; adjBorder='#bbf7d0'; adjLeftBorder='#16a34a'; adjColor='#14532d';
-      adjHero='Average season';
-      adjSub=isShort?'N shortfall is from your application plan, not the weather.':'Weather is tracking as expected.';
-      adjRec='';
-    } else if(extraLostVsPlan>0){
-      adjBg='#fff5f5'; adjBorder='#fecaca'; adjLeftBorder='#dc2626'; adjColor='#7f1d1d';
-      adjHero='Tough season — ~'+extraLostVsPlan+' lb more N lost than expected';
-      adjSub='More leaching or denitrification than your plan assumed.';
-      adjRec=isShort?'This is contributing to your shortfall — apply to close the gap.':'Keep your remaining applications on schedule.';
-    } else {
-      var absExtra=Math.abs(extraLostVsPlan);
-      adjBg='#f0fdf4'; adjBorder='#bbf7d0'; adjLeftBorder='#16a34a'; adjColor='#14532d';
-      adjHero='Easy season — ~'+absExtra+' lb more N retained than expected';
-      adjSub='Less leaching than your plan assumed.';
-      adjRec=isShort?'Even so, you\'re still short. See recommended rate above.':'You may be able to trim ~'+absExtra+' lb from remaining passes.';
-    }
-
-    html+='<div style="background:'+adjBg+';border:1.5px solid '+adjBorder+';border-left:5px solid '+adjLeftBorder+';border-radius:10px;padding:16px 18px;margin-bottom:14px">';
-    html+='<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:'+adjColor+';opacity:0.65;margin-bottom:6px">Given This Season\'s Weather</div>';
-    html+='<div style="font-size:24px;font-weight:800;color:'+adjColor+';line-height:1.1;margin-bottom:4px">'+adjHero+'</div>';
-    html+='<div style="font-size:13px;color:'+adjColor+';opacity:0.8;margin-bottom:6px">'+adjSub+'</div>';
-    html+='<div style="font-size:13px;font-weight:700;color:'+adjColor+'">'+adjRec+'</div>';
-    html+='<div style="margin-top:10px;padding-top:8px;border-top:1px solid '+adjBorder+';font-size:11px;color:'+adjColor+';opacity:0.6;display:flex;gap:18px;flex-wrap:wrap">';
-    html+='<span>Plan assumed: '+Math.round(planLossPct)+'% loss</span>';
-    html+='<span>Actual this season: '+Math.round(actualLossPct)+'% loss</span>';
-    html+='</div>';
-    html+='</div>';
-  } else {
-    html+='<div style="padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e5e7eb;font-size:12px;color:#9ca3af;font-style:italic;margin-bottom:14px">Loading weather data to compute season adjustment&hellip;</div>';
-  }
-
-  // ── Current stage N summary ───────────────────────────────────────────────
-  var surpColor=curRemaining>=0?'#16a34a':'#dc2626';
-  html+='<div style="background:#f8fafc;border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px">';
-  html+='<div>';
-  html+='<div style="font-size:10px;font-weight:600;color:#9ca3af;margin-bottom:2px">N balance at '+STAGES[ci].l+'</div>';
-  html+='<div style="font-size:22px;font-weight:800;color:'+surpColor+';line-height:1">'+(curRemaining>=0?'+':'')+curRemaining+' lb/ac</div>';
-  html+='<div style="font-size:10px;color:#9ca3af">available above crop demand so far</div>';
-  html+='</div></div>';
-
-  // ── Worst-case weather check ─────────────────────────────────────────────
-  var vtMin=Math.round(d.vtTarget||0);
-  var vtWorst=d.bands?Math.round(d.bands.p10[6]||0):null;
-  if(vtWorst!==null){
-    var worstColor=vtWorst>=vtMin?'#16a34a':'#dc2626';
-    html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f8fafc;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:14px">';
-    html+='<div style="font-size:15px">&#9888;</div>';
-    html+='<div>';
-    html+='<div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em">Worst-case year at tassel (50yr)</div>';
-    html+='<div style="font-size:13px;font-weight:700;color:'+worstColor+'">'+vtWorst+' lb/ac &mdash; '+(vtWorst>=vtMin?'above minimum':'below minimum')+'</div>';
-    html+='</div></div>';
-  } else if(!_weatherLossPct){
-    html+='<div style="font-size:11px;color:#9ca3af;font-style:italic;margin-bottom:14px">Loading 50-year weather range&hellip;</div>';
-  }
-
-  // ── Application schedule ─────────────────────────────────────────────────
-  var markers=d.appMarkers||[];
-  if(markers.length){
-    var todayStr=new Date().toISOString().split('T')[0];
-    html+='<div>';
-    html+='<div style="font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">Application Schedule</div>';
-    html+='<div style="display:flex;flex-direction:column;gap:6px">';
-    markers.forEach(function(m,mi){
-      if(!m.raw)return;
-      var past=m.date?m.date<=todayStr:null;
-      var textCol=past===true?'#374151':'#9ca3af';
-      var dateStr=m.date?(function(){var p=m.date.split('-');return (parseInt(p[1]))+'/'+parseInt(p[2]);})():'No date';
-      var noDateStyle=!m.date?';font-style:italic':'';
-      html+='<div style="display:flex;align-items:center;gap:10px">';
-      html+='<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:'+(past===true?'#2d6a2d':'#f3f4f6')+';border:2px solid '+(past===true?'#2d6a2d':'#d1d5db')+';flex-shrink:0">';
-      html+='<span style="font-size:10px;font-weight:700;color:'+(past===true?'#fff':'#9ca3af')+'">'+(mi+1)+'</span></div>';
-      html+='<div style="flex:1"><span style="font-size:13px;font-weight:600;color:'+textCol+noDateStyle+'">'+m.label+'</span>';
-      html+='<span style="font-size:12px;color:#9ca3af;margin-left:6px">+'+m.raw+' lb/ac</span></div>';
-      html+='<div style="font-size:12px;font-weight:600;color:'+(past===true?'#16a34a':past===false?'#6b7280':'#d1d5db')+noDateStyle+'">'+dateStr+'</div>';
-      html+='</div>';
-    });
-    html+='</div></div>';
-  }
-
-  el.innerHTML=html;
-}
-
-var _STAGE_DAYS_SIM = [7, 21, 35, 49, 63, 75, 83, 93, 103, 113, 125];
-
-// ── Cohort-based loss model ──────────────────────────────────────────────────
-
-// Nitrification lag by product: returns {lagDays, rampDays}
-// During lagDays, N is in NH4 form — protected from leaching/denitrification.
-// After lag, susceptibility ramps exponentially over rampDays.
-function _getNitrifLag(productStr){
-  var p=(productStr||'').toLowerCase();
-  if(p.indexOf('anhydrous')!==-1) return {lagDays:15,rampDays:10}; // slow NH4→NO3
-  if(p.indexOf('urea')!==-1&&p.indexOf('uan')===-1) return {lagDays:5,rampDays:5}; // hydrolysis first
-  return {lagDays:0,rampDays:2}; // UAN, AMS, fertigation — already ~50% NO3
-}
-
-// Antecedent wetness index — daily precip adds moisture, ET decays it.
-// Used to scale leaching severity: wet soil loses more per event.
-function _buildWetnessArr(precipMm){
-  var arr=[],w=0;
-  for(var i=0;i<precipMm.length;i++){
-    w+=(precipMm[i]||0)/25.4;
-    w*=0.85; // ~15% daily ET decay
-    arr.push(w);
-  }
-  return arr;
-}
-
-// Simulate one N cohort: amount applied on startDay, with nitrification lag.
-// Only the susceptible (NO3) fraction is exposed to leaching and denitrification.
-function _simCohort(amount,startDay,lagDays,rampDays,precipMm,tex,wetnessArr){
-  var t=tex||TEXTURES.loam;
-  var avail=0,satDays=0,prevDay=0;
-  var leachLoss=0,denitrLoss=0,leachEvents=0;
-  var result=[];
-  for(var s=0;s<STAGES.length;s++){
-    var dayEnd=_STAGE_DAYS_SIM[s];
-    for(var day=prevDay;day<dayEnd&&day<precipMm.length;day++){
-      if(day===startDay) avail=amount;
-      if(avail<=0){satDays=Math.max(0,satDays-1);continue;}
-      var p=(precipMm[day]||0)/25.4;
-      // Susceptibility: 0 during NH4 lag, exponential ramp to 1 as it nitrifies
-      var daysSince=day-startDay;
-      var susc=0;
-      if(daysSince>=lagDays){
-        susc=rampDays>0?Math.min(1,1-Math.exp(-3*(daysSince-lagDays)/rampDays)):1;
-      }
-      var wetness=wetnessArr[day]||0;
-      if(p>t.leachThresh&&susc>0){
-        // Wetness amplifies loss magnitude (not threshold) — wetter soil loses more per event
-        var leachFrac=Math.min(t.leachMax,(p-t.leachThresh)*t.leachRate*(1+wetness*0.3));
-        var lost=avail*susc*leachFrac;
-        avail-=lost; leachLoss+=lost;
-        satDays=Math.min(satDays+2,6); leachEvents++;
-      } else { satDays=Math.max(0,satDays-1); }
-      if(satDays>=t.denitrDays&&susc>0){
-        var dlost=avail*susc*t.denitrRate;
-        avail-=dlost; denitrLoss+=dlost; satDays=1;
-      }
-      if(avail<0)avail=0;
-    }
-    prevDay=dayEnd;
-    result.push(avail); // N remaining in this cohort at stage boundary
-  }
-  result._meta={leachLoss:leachLoss,denitrLoss:denitrLoss,leachEvents:leachEvents};
-  return result;
-}
-
-// Sum all cohorts, subtract crop demand at each stage.
-function _simCohorts(cohorts,demand,precipMm,tex){
-  var wetnessArr=_buildWetnessArr(precipMm);
-  var totalPrecipIn=precipMm.reduce(function(s,v){return s+(v||0);},0)/25.4;
-  var cohortResults=cohorts.map(function(c){
-    return _simCohort(c.amount,c.startDay,c.lagDays,c.rampDays,precipMm,tex,wetnessArr);
-  });
-  var result=STAGES.map(function(st,si){
-    var total=cohortResults.reduce(function(sum,cr){return sum+(cr[si]||0);},0);
-    return total-demand*st.pct/100;
-  });
-  var totLeach=0,totDenitr=0,totEvents=0;
-  cohortResults.forEach(function(cr){
-    if(cr._meta){totLeach+=cr._meta.leachLoss;totDenitr+=cr._meta.denitrLoss;totEvents+=cr._meta.leachEvents;}
-  });
-  result._meta={leachLoss:totLeach,denitrLoss:totDenitr,leachEvents:totEvents,totalPrecipIn:totalPrecipIn};
-  return result;
-}
-
-// Build cohort array from current _chart inputs + application dates.
-function _buildCohorts(rr,plantDateStr){
-  function dayOffset(aDate){
-    if(!aDate||!plantDateStr)return null;
-    return Math.max(0,Math.round((new Date(aDate)-new Date(plantDateStr))/86400000));
-  }
-  var cohorts=[];
-  // Soil credits: already mineralized / in NO3 form on day 0
-  var credits=rr.omCr+rr.prevCr+rr.soilRes;
-  if(credits>0)cohorts.push({amount:credits,startDay:0,lagDays:0,rampDays:1});
-  // Applied N: each app gets its own cohort starting from its application date
-  if(rr.pp>0){var l=_getNitrifLag(gv('pp-prod').value),d=dayOffset(gv('pp-date').value);
-    cohorts.push({amount:rr.pp,startDay:d!==null?d:0,lagDays:l.lagDays,rampDays:l.rampDays});}
-  if(rr.sd>0){var l2=_getNitrifLag(gv('sd-prod').value),d2=dayOffset(gv('sd-date').value);
-    cohorts.push({amount:rr.sd,startDay:d2!==null?d2:35,lagDays:l2.lagDays,rampDays:l2.rampDays});}
-  [['f1',50],['f2',65],['f3',80]].forEach(function(pair){
-    var id=pair[0],def=pair[1],rate=rr[id];
-    if(rate>0){var l3=_getNitrifLag(gv(id+'-prod').value),d3=dayOffset(gv(id+'-date').value);
-      cohorts.push({amount:rate,startDay:d3!==null?d3:def,lagDays:l3.lagDays,rampDays:l3.rampDays});}
-  });
-  if(rr.pvt>0){var l4=_getNitrifLag(gv('pvt-prod').value),d4=dayOffset(gv('pvt-date').value);
-    cohorts.push({amount:rr.pvt,startDay:d4!==null?d4:90,lagDays:l4.lagDays,rampDays:l4.rampDays});}
-  return cohorts;
-}
-
-function _pctile(arr, p){
-  var s=arr.slice().sort(function(a,b){return a-b;});
-  var idx=Math.min(Math.floor(s.length*p), s.length-1);
-  return s[idx];
-}
-
-function _simYear(demand, totalAvail, precipMm, tex){
-  var t=tex||TEXTURES.loam;
-  var avail=totalAvail, satDays=0, prevDay=0, result=[];
-  var leachEvents=0, leachLoss=0, denitrLoss=0, totalPrecipIn=0;
-  for(var s=0;s<STAGES.length;s++){
-    var dayEnd=_STAGE_DAYS_SIM[s];
-    for(var day=prevDay;day<dayEnd&&day<precipMm.length;day++){
-      var p=(precipMm[day]||0)/25.4;
-      totalPrecipIn+=p;
-      if(p>t.leachThresh){
-        var leachFrac=Math.min(t.leachMax,(p-t.leachThresh)*t.leachRate);
-        var lost=avail*leachFrac;
-        avail-=lost; leachLoss+=lost;
-        satDays=Math.min(satDays+2,6);
-        leachEvents++;
-      } else {
-        satDays=Math.max(0,satDays-1);
-      }
-      if(satDays>=t.denitrDays){ var dlost=avail*t.denitrRate; avail-=dlost; denitrLoss+=dlost; satDays=1; }
-      if(avail<0)avail=0;
-    }
-    prevDay=dayEnd;
-    result.push(avail - demand*STAGES[s].pct/100);
-  }
-  result._meta={leachEvents:leachEvents,leachLoss:leachLoss,denitrLoss:denitrLoss,totalPrecipIn:totalPrecipIn};
-  return result;
-}
-
-async function fetchWeatherBands(){
-  var county=(gv('county').value||'Kearney').trim();
-  var state=(gv('state').value||'Nebraska').trim();
-  var plantDate=gv('plantDate').value;
-  var ws=gv('weather-status');
-  if(!plantDate||!_chart)return;
-  var plantMD=plantDate.substring(5); // "05-02"
-  if(ws){ws.textContent='Loading 50-year weather history\u2026';ws.style.display='block';ws.style.color='#9ca3af';}
-  try{
-    // Geocode county via Nominatim (OSM) — handles US county names reliably
-    var cleanCounty=county.replace(/county/i,'').trim();
-    var geoQ=encodeURIComponent(cleanCounty+' County, '+state+', USA');
-    var lat, lon;
-    if(_fieldLatLng){
-      lat=_fieldLatLng.lat; lon=_fieldLatLng.lng;
-    } else {
-      var geoRes=await fetch('https://nominatim.openstreetmap.org/search?q='+geoQ+'&format=json&limit=1');
-      var geoData=await geoRes.json();
-      if(!geoData||!geoData.length)throw new Error('Location not found');
-      lat=parseFloat(geoData[0].lat); lon=parseFloat(geoData[0].lon);
-    }
-
-    // Fetch 50 years of daily precip
-    var curYear=new Date().getFullYear();
-    var startDate=(curYear-51)+'-'+plantMD;
-    var endDate=(curYear-1)+'-10-15';
-    var wRes=await fetch('https://archive-api.open-meteo.com/v1/archive?latitude='+lat+'&longitude='+lon+'&start_date='+startDate+'&end_date='+endDate+'&daily=precipitation_sum&timezone=auto');
-    var wData=await wRes.json();
-    if(!wData.daily||!wData.daily.time)throw new Error('No weather data');
-
-    // Group into per-year arrays starting from plantMD
-    var yearPrecip={};
-    var times=wData.daily.time, precip=wData.daily.precipitation_sum;
-    for(var i=0;i<times.length;i++){
-      var yr=parseInt(times[i].substring(0,4));
-      var md=times[i].substring(5);
-      if(!yearPrecip[yr]&&md===plantMD) yearPrecip[yr]=[];
-      if(yearPrecip[yr]!==undefined&&yearPrecip[yr].length<140) yearPrecip[yr].push(precip[i]||0);
-    }
-
-    // Simulate each year
-    var demand=_chart.demand, totalAvail=_chart.totalAvail;
-    var tex=TEXTURES[gv('soilTexture').value]||TEXTURES.loam;
-    var yearRows=[];
-    for(var yr in yearPrecip){
-      if(yearPrecip[yr].length>=100){
-        var sim=_simYear(demand,totalAvail,yearPrecip[yr],tex);
-        yearRows.push({year:parseInt(yr), sim:sim, meta:sim._meta});
-      }
-    }
-    if(yearRows.length<10)throw new Error('Not enough data');
-
-    // Sort most-recent first, then slice into 10/25/50-yr windows
-    yearRows.sort(function(a,b){return b.year-a.year;});
-    var allRem=yearRows.map(function(r){return r.sim;});
-    function _mkBands(rows){
-      var bd={p10:[],p25:[],p50:[],p75:[],p90:[]};
-      for(var s=0;s<STAGES.length;s++){
-        var vals=rows.map(function(r){return r.sim[s];});
-        bd.p10.push(_pctile(vals,0.10)); bd.p25.push(_pctile(vals,0.25));
-        bd.p50.push(_pctile(vals,0.50)); bd.p75.push(_pctile(vals,0.75));
-        bd.p90.push(_pctile(vals,0.90));
-      }
-      return bd;
-    }
-    var bands50=_mkBands(yearRows);
-    var bands25=_mkBands(yearRows.slice(0,Math.min(25,yearRows.length)));
-    var bands10=_mkBands(yearRows.slice(0,Math.min(10,yearRows.length)));
-    var bands=bands50; // legacy reference for tooltip/stress
-
-    // Current season actual precip — fetch from planting date to today
-    var today=new Date().toISOString().split('T')[0];
-    var curPlantDate=new Date().getFullYear()+'-'+plantMD;
-    var stagePrecip=new Array(STAGES.length).fill(0);
-    try{
-      var cpRes=await fetch('https://archive-api.open-meteo.com/v1/archive?latitude='+lat+'&longitude='+lon+'&start_date='+curPlantDate+'&end_date='+today+'&daily=precipitation_sum,temperature_2m_max,temperature_2m_min&timezone=auto');
-      var cpData=await cpRes.json();
-      if(cpData.daily&&cpData.daily.time){
-        var cpTimes=cpData.daily.time, cpPrecip=cpData.daily.precipitation_sum;
-        var cpTmax=cpData.daily.temperature_2m_max||[], cpTmin=cpData.daily.temperature_2m_min||[];
-        var cpPrecipMm=cpPrecip.map(function(v){return v||0;});
-        for(var i=0;i<cpTimes.length;i++){
-          var dayN=i;
-          var stageForDay=0;
-          for(var s=0;s<_STAGE_DAYS_SIM.length;s++){if(dayN<=_STAGE_DAYS_SIM[s]){stageForDay=s;break;} stageForDay=s;}
-          stagePrecip[stageForDay]+=(cpPrecip[i]||0)/25.4;
-        }
-        // Cohort-based simulation: each application runs from its own date,
-        // only susceptible NO3 fraction exposed to weather losses.
-        var rr=_chart._rawRates;
-        var cohorts=_buildCohorts(rr,gv('plantDate').value);
-        var curSim=_simCohorts(cohorts,_chart.demand,cpPrecipMm,tex);
-        var cm=curSim._meta;
-        _chart.stagedRemVals=curSim;
-        _chart._cohorts=cohorts;
-        // Weather loss % vs plan for hero card (losses / total applied N)
-        var appliedN=(rr.pp||0)+(rr.sd||0)+(rr.f1||0)+(rr.f2||0)+(rr.f3||0)+(rr.pvt||0);
-        if(appliedN>0) _weatherLossPct=Math.min(65,(cm.leachLoss+cm.denitrLoss)/appliedN*100);
-        var lossEl=gv('n-loss-breakdown');
-        if(lossEl&&cm&&_chart._sources){
-          var s=_chart._sources;
-          var ll=Math.round(cm.leachLoss), dl=Math.round(cm.denitrLoss);
-          var totalLost=ll+dl;
-          var appliedTotal=s.prePlant+s.sidedress+s.fert1+s.fert2+s.fert3;
-          var totalSources=appliedTotal+s.mineralization+s.prevCrop;
-          var net=totalSources-totalLost;
-          function row(label,val,color,sub){
-            return '<tr>'
-              +'<td style="padding:4px 8px 4px 0;font-size:12px;color:#6b7280">'+label+'</td>'
-              +'<td style="padding:4px 0;font-size:13px;font-weight:700;text-align:right;color:'+(color||'#374151')+'">'+val+'</td>'
-              +(sub?'<td style="padding:4px 0 4px 8px;font-size:10px;color:#9ca3af">'+sub+'</td>':'<td></td>')
-              +'</tr>';
-          }
-          lossEl.style.display='block';
-          lossEl.innerHTML='<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:#374151;margin-bottom:10px">N This Season</div>'
-            +'<table style="width:100%;border-collapse:collapse">'
-            +'<tr><td colspan="3" style="font-size:10px;font-weight:700;color:#16a34a;padding:2px 0 4px;text-transform:uppercase;letter-spacing:0.04em">Sources</td></tr>'
-            +(s.prePlant?row('Pre-plant applied','+'+s.prePlant+' lb/ac','#16a34a'):'')
-            +(s.sidedress?row('Sidedress','+'+s.sidedress+' lb/ac','#16a34a'):'')
-            +(s.fert1?row('Fertigation 1','+'+s.fert1+' lb/ac','#16a34a'):'')
-            +(s.fert2?row('Fertigation 2','+'+s.fert2+' lb/ac','#16a34a'):'')
-            +(s.fert3?row('Fertigation 3','+'+s.fert3+' lb/ac','#16a34a'):'')
-            +row('Mineralization','+'+s.mineralization+' lb/ac','#16a34a','OM × 20')
-            +(s.prevCrop?row('Prev. crop credit','+'+s.prevCrop+' lb/ac','#16a34a','soybean'):'')
-            +(s.soilResidual?row('Soil residual','+'+s.soilResidual+' lb/ac','#16a34a','soil test'):'')
-            +(totalLost>0?'<tr><td colspan="3" style="border-top:1px solid #e5e7eb;padding:6px 0 4px;font-size:10px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.04em">Weather Losses</td></tr>':'')
-            +(ll>0?row('Leaching','−'+ll+' lb/ac','#b45309',cm.leachEvents+' event'+(cm.leachEvents!==1?'s':'')+' &gt;'+tex.leachThresh+'"'):'')
-            +(dl>0?row('Denitrification','−'+dl+' lb/ac','#7c3aed','sat. soil days'):'')
-            +'<tr style="border-top:2px solid #374151"><td style="padding:8px 8px 4px 0;font-size:13px;font-weight:700">Net N</td>'
-            +'<td style="padding:8px 0 4px;font-size:15px;font-weight:800;text-align:right;color:'+(net>0?'#1a56a0':'#dc2626')+'">'+net+' lb/ac</td>'
-            +'<td style="padding:8px 0 4px 8px;font-size:10px;color:#9ca3af">'+cm.totalPrecipIn.toFixed(1)+'" rain</td></tr>'
-            +'</table>';
-        }
-      }
-      // Accumulate GDUs from planting to today
-      function gduDay(maxC,minC){
-        var maxF=Math.min(86,maxC*9/5+32), minF=Math.max(50,minC*9/5+32);
-        return Math.max(0,(maxF+minF)/2-50);
-      }
-      var accumGDU=0;
-      for(var gi=0;gi<cpTmax.length;gi++) accumGDU+=gduDay(cpTmax[gi]||0,cpTmin[gi]||0);
-      _chart._accumGDU=Math.round(accumGDU);
-
-      // 14-day forecast — extend precip array forward and bend the prediction line
-      try{
-        var fcRes=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lon+'&daily=precipitation_sum,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=14');
-        var fcData=await fcRes.json();
-        if(fcData.daily&&fcData.daily.time){
-          var fcPrecip=fcData.daily.precipitation_sum||[];
-          var fcPrecipMm=fcPrecip.map(function(v){return v||0;});
-          // Project VT date using accumulated GDUs + forecast temps
-          var VT_THRESHOLD=1300; // ~110 CRM Nebraska corn, base 50°F
-          var fcTmax=fcData.daily.temperature_2m_max||[], fcTmin=fcData.daily.temperature_2m_min||[];
-          var gduLeft=VT_THRESHOLD-(accumGDU||0);
-          var vtDate=null, vtDaysOut=null;
-          if(gduLeft<=0){
-            vtDate='reached'; // already at/past VT
-          } else {
-            var fcAvgGDU=0, fcDays=0;
-            for(var gi2=0;gi2<fcTmax.length;gi2++){
-              var dGDU=gduDay(fcTmax[gi2]||0,fcTmin[gi2]||0);
-              fcAvgGDU+=dGDU; fcDays++;
-              gduLeft-=dGDU;
-              if(gduLeft<=0){
-                var vtD=new Date(fcData.daily.time[gi2]);
-                vtDate=(vtD.getMonth()+1)+'/'+(vtD.getDate());
-                vtDaysOut=gi2+1;
-                break;
-              }
-            }
-            if(!vtDate&&fcDays>0){
-              // Forecast window not long enough — extrapolate using avg GDU/day
-              var avgPerDay=fcAvgGDU/Math.max(1,fcDays);
-              if(avgPerDay>0){
-                var extraDays=Math.ceil(gduLeft/avgPerDay);
-                var extDate=new Date();
-                extDate.setDate(extDate.getDate()+fcDays+extraDays);
-                vtDate='~'+(extDate.getMonth()+1)+'/'+(extDate.getDate());
-                vtDaysOut=fcDays+extraDays;
-              }
-            }
-          }
-          _chart._vtDate=vtDate;
-          _chart._vtDaysOut=vtDaysOut;
-          _chart._accumGDU=Math.round(accumGDU||0);
-          // Map forecast days to stages (day 0 of forecast = day after today)
-          var daysIntoSeason=cpPrecipMm.length; // days from planting to today
-          for(var fi=0;fi<fcPrecipMm.length;fi++){
-            var dayN=daysIntoSeason+fi;
-            var stageForDay=_STAGE_DAYS_SIM.length-1;
-            for(var s2=0;s2<_STAGE_DAYS_SIM.length;s2++){if(dayN<=_STAGE_DAYS_SIM[s2]){stageForDay=s2;break;}}
-            if(stageForDay>_chart.curIdx) stagePrecip[stageForDay]+=(fcPrecipMm[fi]||0)/25.4;
-          }
-          // Forecast delta: run cohorts with past+forecast precip, apply difference
-          // to future stages only. Preserves actual past losses already computed.
-          var combinedPrecipMm=cpPrecipMm.concat(fcPrecipMm);
-          var fcSim=_simCohorts(cohorts,_chart.demand,combinedPrecipMm,tex);
-          var prevRemVals=_chart.stagedRemVals.slice();
-          _chart.stagedRemVals=STAGES.map(function(st,si){
-            if(si<=_chart.curIdx) return prevRemVals[si];
-            var forecastDelta=fcSim[si]-curSim[si];
-            return prevRemVals[si]+forecastDelta;
-          });
-        }
-      }catch(e3){/* forecast unavailable — prediction uses texture default */}
-    }catch(e2){/* silently skip current-season precip if unavailable */}
-
-    _chart.bands=bands50; _chart.bands25=bands25; _chart.bands10=bands10;
-    _chart.stagePrecip=stagePrecip;
-    _chart.yearRows=yearRows;
-    _chart.curIdx2=_chart.curIdx;
-    if(ws){ws.textContent='Historical range based on '+allRem.length+' years of weather data \u00b7 '+county+', '+state;}
-    _renderHistTable();
-    _updateVisuals();
-  } catch(e){
-    console.warn('Weather bands:',e.message);
-    if(ws){ws.textContent='Weather history unavailable for this location.';ws.style.color='#f87171';}
-  }
-}
-
-function _renderHistTable(){
-  var d=_chart; if(!d||!d.yearRows)return;
-  var rows=d.yearRows, curIdx=d.curIdx, userVal=d.stagedRemVals[curIdx], vtIdx=6;
-  // Sort by N remaining at current stage descending (best year first)
-  var sorted=rows.slice().sort(function(a,b){return b.sim[curIdx]-a.sim[curIdx];});
-  var html='';
-  for(var i=0;i<sorted.length;i++){
-    var r=sorted[i];
-    var nCur=Math.round(r.sim[curIdx]);
-    var nVT=Math.round(r.sim[vtIdx]);
-    var cls=nCur>=Math.round(userVal)?'yr-good':'yr-bad';
-    html+='<tr><td>'+r.year+'</td>'+
-      '<td style="text-align:right">'+r.meta.leachEvents+'</td>'+
-      '<td style="text-align:right">'+r.meta.totalPrecipIn.toFixed(1)+'"</td>'+
-      '<td style="text-align:right" class="'+cls+'">'+nCur+'</td>'+
-      '<td style="text-align:right">'+nVT+'</td>'+
-      '</tr>';
-  }
-  gv('hist-tbody').innerHTML=html;
-  // Update column header to show current stage name
-  var th=gv('hist-th-cur'); if(th) th.innerHTML='N Rem. '+STAGES[curIdx].l+'<br><span style="font-weight:400;font-size:10px">lb/ac</span>';
-  gv('hist-section').style.display='';
-}
-
-function setNFactor(v){
-  var sy=window.scrollY;
-  gv('nFactor').value=v;
-  gv('nFactor-pills').querySelectorAll('.nf-pill').forEach(function(b){
-    b.classList.toggle('nf-active', parseFloat(b.textContent)===v);
-  });
-  calculate();
-  window.scrollTo(0,sy);
-}
-
-function toggleHist(){
-  var wrap=gv('hist-table-wrap'), btn=gv('hist-toggle');
-  var open=wrap.style.display==='none';
-  wrap.style.display=open?'':'none';
-  btn.textContent=open?'Hide':'Show';
-}
-
-// ── Field map + SSURGO soil lookup ──────────────────────────────────────────
-var _fieldLatLng=null;
-
-function initFieldMap(){
-  var map=L.map('field-map',{zoomControl:true,attributionControl:false})
-    .setView([41.5,-99.5],6);
-  L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',{maxZoom:20}).addTo(map);
-  var marker=null;
-
-  function placePin(latlng){
-    if(marker)map.removeLayer(marker);
-    marker=L.marker(latlng).addTo(map);
-    _fieldLatLng={lat:latlng.lat,lng:latlng.lng};
-    lookupSoil(latlng.lat,latlng.lng);
-  }
-
-  map.on('click',function(e){ placePin(e.latlng); });
-
-  // Locate Me button
-  var btn=L.control({position:'topright'});
-  btn.onAdd=function(){
-    var d=L.DomUtil.create('button','');
-    d.innerHTML='&#9654; Locate Me';
-    d.style.cssText='background:#fff;border:1.5px solid #d1d5db;border-radius:6px;padding:6px 10px;font-size:13px;font-weight:600;color:#374151;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.15)';
-    L.DomEvent.on(d,'click',function(e){
-      L.DomEvent.stopPropagation(e);
-      d.textContent='Locating…';
-      d.disabled=true;
-      navigator.geolocation.getCurrentPosition(function(pos){
-        var ll=L.latLng(pos.coords.latitude,pos.coords.longitude);
-        map.setView(ll,15);
-        placePin(ll);
-        d.innerHTML='&#9654; Locate Me';
-        d.disabled=false;
-      },function(){
-        d.innerHTML='&#9654; Locate Me';
-        d.disabled=false;
-        alert('Location unavailable. Tap your field on the map.');
-      },{timeout:8000});
-    });
-    return d;
-  };
-  btn.addTo(map);
-}
-
-function hsgToTex(hydgrp){
-  var h=((hydgrp||'').match(/[A-D]/)||['B'])[0];
-  return {A:'sandyLoam',B:'loam',C:'clayLoam',D:'clay'}[h]||'loam';
-}
-
-function lookupSoil(lat,lng){
-  var chip=gv('soil-chip');
-  chip.style.display='block';
-  chip.style.background='#f0f9ff'; chip.style.borderColor='#bae6fd'; chip.style.color='#0369a1';
-  chip.textContent='Looking up soil data…';
-  fetch('/.netlify/functions/soil-lookup?lat='+lat.toFixed(5)+'&lng='+lng.toFixed(5))
-  .then(function(r){return r.json();}).then(function(data){
-    if(!data.Table||!data.Table.length){
-      chip.style.background='#fff5f5'; chip.style.borderColor='#fecaca'; chip.style.color='#dc2626';
-      chip.textContent='No soil data found for this location.'; return;
-    }
-    var row=data.Table[0];
-    var compname=row[0]||'', hydgrp=(row[1]||'').trim(), drainagecl=row[2]||'', omR=parseFloat(row[3])||0;
-    var texKey=hsgToTex(hydgrp);
-    gv('soilTexture').value=texKey;
-    if(omR>0) gv('om').value=omR.toFixed(1);
-    updateTextureUI();
-    var texLabels={sand:'Sandy/Loamy Sand',sandyLoam:'Sandy Loam',loam:'Loam/Silt Loam',clayLoam:'Clay Loam',clay:'Clay'};
-    chip.style.background='#f0fdf4'; chip.style.borderColor='#bbf7d0'; chip.style.color='#166534';
-    chip.innerHTML='<strong>'+compname+'</strong>'
-      +(hydgrp?' &nbsp;·&nbsp; HSG '+hydgrp:'')
-      +(drainagecl?' &nbsp;·&nbsp; '+drainagecl:'')
-      +'<br><span style="color:#6b7280">Auto-filled: '+texLabels[texKey]+(omR>0?', OM '+omR.toFixed(1)+'%':'')+'</span>';
-  }).catch(function(){
-    chip.style.background='#fff5f5'; chip.style.borderColor='#fecaca'; chip.style.color='#dc2626';
-    chip.textContent='Could not load soil data — check connection.';
-  });
-}
-
-updateTextureUI();
-setTimeout(initFieldMap,0);
 </script>
 </body>
 </html>
