@@ -194,6 +194,33 @@ tr:last-child td{border-bottom:none}
 .td-db{color:var(--bad);font-weight:600}
 .tr-tot td{font-weight:800;background:#f7faf7;border-top:1.5px solid var(--border)}
 .tr-tot:last-child td{font-size:14px}
+/* Section headers inside table */
+.tr-sec td{
+  font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  padding:10px 18px 5px;color:var(--t3);background:var(--bg);
+  border-bottom:none;border-top:1.5px solid var(--border)}
+.tr-sec.first td{border-top:none}
+.tr-sec.sources td{color:#15803d}
+.tr-sec.losses td{color:#b45309}
+.tr-sec.net td{color:var(--blue)}
+/* Subtotal rows */
+.tr-sub td{font-weight:700;background:#f7faf7;border-top:1px dashed var(--border);
+  font-size:12px}
+/* Visual budget bars */
+.bv-wrap{padding:16px 18px 14px;border-bottom:1px solid var(--border)}
+.bv-row{margin-bottom:10px}
+.bv-lbl{display:flex;justify-content:space-between;align-items:center;
+  font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--t3);margin-bottom:5px}
+.bv-lbl span{font-size:12px;font-weight:700;letter-spacing:0;text-transform:none}
+.bv-track{height:14px;border-radius:7px;background:var(--bg);
+  overflow:hidden;position:relative}
+.bv-fill{height:100%;border-radius:7px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.bv-fill.applied{background:linear-gradient(90deg,#15803d,#16a34a)}
+.bv-fill.credits{background:linear-gradient(90deg,#16a34a,#4ade80)}
+.bv-fill.losses-fill{background:linear-gradient(90deg,#dc2626,#ef4444)}
+.bv-demand-line{position:absolute;top:0;bottom:0;width:2px;background:#d97706;
+  border-radius:1px}
 
 /* MRTN context */
 .mrtn-box{background:var(--blue-bg);border:1px solid #bfdbfe;
@@ -278,6 +305,11 @@ footer a{color:var(--t3);text-decoration:none}
     </div>
   </div>
   <div class="field">
+    <label>Residual Soil Nitrate (lb N/ac)</label>
+    <input type="number" id="residualN" value="0" min="0" max="200">
+    <div class="hint">From 0–24" fall or spring soil test. Enter 0 if untested. Per UNL EC117 — credit all NO₃-N measured in 0–24" profile.</div>
+  </div>
+  <div class="field">
     <label>Soil Texture</label>
     <select id="texture">
       <option value="sandy">Sandy / Sandy Loam — High leach risk, low mineralization</option>
@@ -289,10 +321,10 @@ footer a{color:var(--t3);text-decoration:none}
     <label>Previous Crop</label>
     <select id="prevCrop">
       <option value="corn">Corn</option>
-      <option value="soy">Soybean (+50 lb N/ac credit)</option>
+      <option value="soy">Soybean (+25–45 lb N/ac, varies by texture)</option>
       <option value="alfalfa">Alfalfa, 1st yr after (+80 lb N/ac credit)</option>
-      <option value="legcover">Legume Cover Crop (+25 lb N/ac credit)</option>
-      <option value="other">Other</option>
+      <option value="legcover">Legume Cover Crop / Hairy Vetch (+50 lb N/ac credit)</option>
+      <option value="other">Other / Grass Cover Crop</option>
     </select>
   </div>
   <div class="grid2">
@@ -362,6 +394,21 @@ footer a{color:var(--t3);text-decoration:none}
   </div>
 
   <div class="app-box">
+    <div class="app-box-hd"><span class="app-box-ttl">Starter N at Planting</span><span class="opt-badge">Optional</span></div>
+    <div class="grid2">
+      <div class="field"><label>Product</label>
+        <select id="st-prod">
+          <option selected>10-34-0 (in-furrow / 2×2)</option>
+          <option>6-24-6</option><option>UAN 28%</option><option>Other</option>
+        </select>
+      </div>
+      <div class="field"><label>Rate (lb N/ac)</label><input type="number" id="st-rate" value="0" min="0" max="30">
+        <div class="hint">5 gal/ac 10-34-0 ≈ 5.8 lb N</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-box">
     <div class="app-box-hd"><span class="app-box-ttl">Fertigation 1</span></div>
     <div class="grid2">
       <div class="field"><label>Product</label>
@@ -400,7 +447,24 @@ footer a{color:var(--t3);text-decoration:none}
         <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
       </svg>
     </div>
-    <div><div class="card-ttl">Loss Factors</div><div class="card-sub">Leaching, denitrification &amp; irrigation losses</div></div>
+    <div><div class="card-ttl">Losses &amp; Water Credits</div><div class="card-sub">Leaching, denitrification, irrigation losses &amp; water NO₃</div></div>
+  </div>
+
+  <div class="field">
+    <label>Irrigation Water Nitrate</label>
+    <div class="grid2">
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--t3);margin-bottom:4px">NO₃-N Concentration</div>
+        <input type="number" id="irrigPPM" value="0" min="0" max="50" step="0.5">
+        <div class="hint">ppm NO₃-N in groundwater. NE Platte Valley avg: 10–20 ppm. Test your well.</div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--t3);margin-bottom:4px">Season Irrigation (inches)</div>
+        <input type="number" id="irrigInches" value="0" min="0" max="30" step="0.5">
+        <div class="hint">Total inches applied this season (actual + planned)</div>
+      </div>
+    </div>
+    <div class="hint" style="margin-top:4px">Credit = ppm × inches × 0.227 &nbsp;·&nbsp; Example: 15 ppm × 12" = <strong>41 lb N/ac free credit</strong> (UNL CropWatch 2023)</div>
   </div>
 
   <div class="field">
@@ -455,7 +519,27 @@ footer a{color:var(--t3);text-decoration:none}
 
   <div class="table-card">
     <div class="table-ttl">N Budget Breakdown</div>
-    <table><thead><tr><th>Item</th><th style="text-align:right">lb N/ac</th></tr></thead>
+    <div class="bv-wrap" id="bv-wrap">
+      <div class="bv-row" id="bv-sources-row">
+        <div class="bv-lbl">N Sources <span id="bv-sources-val">—</span></div>
+        <div class="bv-track">
+          <div class="bv-fill applied" id="bv-applied-bar" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="bv-row" id="bv-credits-row">
+        <div class="bv-lbl">Soil &amp; Rotation Credits <span id="bv-credits-val">—</span></div>
+        <div class="bv-track">
+          <div class="bv-fill credits" id="bv-credits-bar" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="bv-row">
+        <div class="bv-lbl">N Losses <span id="bv-losses-val">—</span></div>
+        <div class="bv-track">
+          <div class="bv-fill losses-fill" id="bv-losses-bar" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+    <table><thead><tr><th>Line Item</th><th style="text-align:right">lb N/ac</th></tr></thead>
     <tbody id="tbody"></tbody></table>
   </div>
 
@@ -474,11 +558,14 @@ footer a{color:var(--t3);text-decoration:none}
     <div class="sources-body">
       <strong>N Demand:</strong> Yield goal × N factor (1.0–1.10 lb N/bu based on yield target). Modern high-yielding hybrids (>240 bu/ac) require ~10% more N per bushel (Haegele et al., 2013; Below et al.).<br><br>
       <strong>N Uptake Curve:</strong> Bender, Haegele, Ruffo &amp; Below (2013). <em>Agronomy Journal</em> 105:161–170. Cumulative uptake by growth stage: VE-V3=5%, V4-V6=10%, V7-V9=20%, V10-V12=35%, V13-V15=55%, V16-VT=70%, R1=80%, R2=88%, R3=94%, R4=98%, R5-R6=100%.<br><br>
-      <strong>OM Mineralization:</strong> Sandy: 14 lb N/% OM; Medium: 20 lb N/% OM; Fine: 26 lb N/% OM. USDA-NRCS / UNL EC117 / ISU PM2015.<br><br>
-      <strong>Leaching Losses:</strong> Loss per heavy rain event by soil texture: Sandy ~18%, Medium ~10%, Fine ~5%. ISU Extension; <em>Crops.extension.iastate.edu</em>; UNL CropWatch 2022.<br><br>
-      <strong>Denitrification:</strong> Saturation >48 hr: Sandy +8%, Medium +15%, Fine +22%. UNL CropWatch; Bayer Crop Science field research; ISU Integrated Crop Management.<br><br>
+      <strong>OM Mineralization:</strong> Sandy: 18 lb N/% OM; Medium: 22 lb N/% OM; Fine: 28 lb N/% OM. UNL EC117 2023, Penn State Extension, Purdue AY-318. Values represent growing-season mineralization (May–Sept) at normal moisture. Sandy soils raised from 14 to 18 to reflect literature floor of ~18–20 lb/% OM per UNL CropWatch.<br><br>
+      <strong>Leaching Losses:</strong> Per qualifying drainage event (>1" rain on near-saturated profile) by texture: Sandy ~18%, Medium ~10%, Fine ~5%. ISU ICM — Nitrogen Losses After Heavy Rains; UNL CropWatch 2022.<br><br>
+      <strong>Denitrification:</strong> Saturation >48 hr: Sandy +3%, Medium +15%, Fine +22%. Sandy reduced from 8% — sandy soils drain in <24 hr and rarely sustain anaerobic conditions (ISU ICM 2014). Medium/Fine rates: 4–5% per day at >65°F × ~3–5 days (ISU Estimating N Losses 2011).<br><br>
+      <strong>Previous Crop Credits:</strong> Soybean: 45 lb/ac non-sandy, 25 lb/ac sandy (UNL EC117 2023). Alfalfa 1st-yr: 80 lb/ac (middle of 50–150 lb range). Legume cover crop (hairy vetch): 50 lb/ac (midpoint of 40–70 lb, UNL CropWatch 2022). Credits per UNL EC117 2023; ISU PM-1501.<br><br>
+      <strong>Residual Soil Nitrate:</strong> Credit all NO₃-N measured in 0–24" profile. UNL EC117 2023 — most significant credit for over-applied or manured fields.<br><br>
+      <strong>Irrigation Water N:</strong> Credit = ppm NO₃-N × inches × 0.227. UNL CropWatch 2023 — "Don't Lose Out on Free Nitrogen from Irrigation Water." NE Platte Valley avg 10–20 ppm; some fields 25+ ppm.<br><br>
       <strong>MRTN:</strong> Sawyer, Nafziger, Randall, Bundy, Rehm &amp; Joern (2006). Iowa State University PM2015. Current MRTN ranges: C/Sb $4.50/bu = 130–165 lb N/ac, C/C = 165–200 lb N/ac.<br><br>
-      <strong>Application Timing Efficiency:</strong> Fall anhydrous 92%; Spring pre-plant 97%; Sidedress &amp; fertigation 100%. UNL EC117; Melvin &amp; Schepers (1995).<br><br>
+      <strong>Application Timing Efficiency:</strong> Fall anhydrous 92%; Spring pre-plant (injected) 97%; Sidedress &amp; fertigation 100%. UNL EC117; Melvin &amp; Schepers (1995).<br><br>
       <em>Estimates only. Consult a licensed CCA for site-specific recommendations.</em>
     </div>
   </details>
@@ -499,10 +586,12 @@ var STAGES = [
 ];
 
 // Texture-specific parameters
+// Mineralization: UNL EC117 / Penn State range (lb N per % OM, growing season)
+// Sandy sat loss lowered — sandy drains in <24hr, minimal true denitrification
 var TEXTURE = {
-  sandy:  {minerMult:14, leachPct:18, satPct:8},
-  medium: {minerMult:20, leachPct:10, satPct:15},
-  fine:   {minerMult:26, leachPct:5,  satPct:22}
+  sandy:  {minerMult:18, leachPct:18, satPct:3},
+  medium: {minerMult:22, leachPct:10, satPct:15},
+  fine:   {minerMult:28, leachPct:5,  satPct:22}
 };
 
 // Application timing efficiency
@@ -511,66 +600,81 @@ var TIMING_EFF = {fall:0.92, spring:0.97};
 function gv(id){return document.getElementById(id);}
 function num(id){return parseFloat(gv(id).value)||0;}
 
+function r2(n){return Math.round(n);}
+function fmt(n,plus){
+  var v=r2(n); return (plus && v>0?'+':'')+v;
+}
+
 function calculate(){
   var yg       = num('yieldGoal');
   var texture  = gv('texture').value;
   var om       = num('om');
   var prevCrop = gv('prevCrop').value;
+  var residualN = num('residualN');
   var stageEl  = gv('stage');
   var stagePct = parseInt(stageEl.options[stageEl.selectedIndex].getAttribute('data-pct'))||0;
   var stageVal = stageEl.value;
 
-  // N rates
+  // Applied N rates
   var ppRate = num('pp-rate');
   var sdRate = num('sd-rate');
+  var stRate = num('st-rate');
   var f1 = num('f1-rate'), f2 = num('f2-rate'), f3 = num('f3-rate');
 
   // Timing efficiency for pre-plant
   var ppTiming = document.querySelector('input[name=pp-timing]:checked');
   var ppEff = ppTiming ? TIMING_EFF[ppTiming.value] || 0.97 : 0.97;
+  var ppTimingLoss = ppRate * (1 - ppEff); // explicit timing/volatilization loss
+
+  // Irrigation water N credit: ppm × inches × 0.227 (UNL formula)
+  var irrigPPM    = num('irrigPPM');
+  var irrigInches = num('irrigInches');
+  var irrigWaterN = irrigPPM * irrigInches * 0.227;
 
   // Loss factors
   var leachEvents = parseInt(document.querySelector('input[name=leach]:checked').value)||0;
   var sat  = gv('saturated').checked;
-  var irrig = parseInt(document.querySelector('input[name=irrigexcess]:checked').value)||0;
+  var irrigExcess = parseInt(document.querySelector('input[name=irrigexcess]:checked').value)||0;
 
   var tx = TEXTURE[texture] || TEXTURE.medium;
 
   // ── N DEMAND ──────────────────────────────────────
-  // Modern hybrids: higher N factor at high yield targets
   var nFactor = yg <= 180 ? 1.0 : yg <= 240 ? 1.05 : 1.10;
   var demand = yg * nFactor;
 
-  // ── CREDITS ───────────────────────────────────────
-  var omCredit = om * tx.minerMult;
-  var prevCredit = {corn:0, soy:50, alfalfa:80, legcover:25, other:0}[prevCrop] || 0;
-
-  // ── APPLIED N (with timing efficiency) ───────────
+  // ── APPLIED N (post-efficiency) ──────────────────
   var ppN  = ppRate  * ppEff;
-  var sdN  = sdRate  * 1.0;
-  var f1N  = f1 * 1.0;
-  var f2N  = f2 * 1.0;
-  var f3N  = f3 * 1.0;
-  var appliedN = ppN + sdN + f1N + f2N + f3N;
-  var rawApplied = ppRate + sdRate + f1 + f2 + f3;
+  var sdN  = sdRate;
+  var stN  = stRate;
+  var f1N  = f1, f2N = f2, f3N = f3;
+  var appliedN = ppN + sdN + stN + f1N + f2N + f3N;
+  var rawApplied = ppRate + sdRate + stRate + f1 + f2 + f3;
+
+  // ── SOIL & ROTATION CREDITS ───────────────────────
+  var omCredit = om * tx.minerMult;
+  // Soybean credit: texture-dependent per UNL EC117 2023
+  var prevCredit = 0;
+  if(prevCrop==='soy')     prevCredit = (texture==='sandy') ? 25 : 45;
+  else if(prevCrop==='alfalfa')  prevCredit = 80;
+  else if(prevCrop==='legcover') prevCredit = 50; // hairy vetch midpoint per UNL CropWatch
+  var soilCredits = omCredit + prevCredit + residualN + irrigWaterN;
 
   // ── LOSSES ────────────────────────────────────────
-  var leachPctPerEvent = tx.leachPct;
-  var leachLoss = appliedN * (leachEvents * leachPctPerEvent / 100);
-  var satLoss   = sat  ? appliedN * (tx.satPct / 100) : 0;
-  var irrigLoss = irrig === 1 ? appliedN * 0.08 :
-                  irrig === 2 ? appliedN * 0.15 : 0;
-
-  var totalLoss = leachLoss + satLoss + irrigLoss;
+  var leachLoss  = appliedN * (leachEvents * tx.leachPct / 100);
+  var satLoss    = sat ? appliedN * (tx.satPct / 100) : 0;
+  var irrigExcessLoss = irrigExcess===1 ? appliedN*0.08 :
+                        irrigExcess===2 ? appliedN*0.15 : 0;
+  var rawLoss = leachLoss + satLoss + irrigExcessLoss;
   // Cap at 55% of applied
-  if (totalLoss > appliedN * 0.55) totalLoss = appliedN * 0.55;
+  var totalLoss = Math.min(rawLoss, appliedN * 0.55);
 
   // ── TOTALS ────────────────────────────────────────
-  var totalAvail  = appliedN + omCredit + prevCredit - totalLoss;
+  var totalAvail   = appliedN + soilCredits - totalLoss;
   var uptakeToDate = demand * stagePct / 100;
   var remaining    = totalAvail - uptakeToDate;
   var stillNeeded  = demand * (1 - stagePct / 100);
   var surplus      = remaining - stillNeeded;
+  var sign         = surplus >= 0 ? '+' : '';
 
   // ── STATUS ────────────────────────────────────────
   var cls, lbl, rec, action;
@@ -588,7 +692,7 @@ function calculate(){
     action='Recommended: 20–30 lb N/ac via UAN or AMS';
   } else {
     cls='deficit'; lbl='N Deficient';
-    var fertAmt = Math.min(40, Math.round(Math.abs(surplus) + 15));
+    var fertAmt = Math.min(40, r2(Math.abs(surplus) + 15));
     rec='Crop is nitrogen deficient. Fertigation is strongly recommended — apply as soon as possible.';
     action='Apply ASAP: ' + fertAmt + ' lb N/ac via UAN or AMS';
   }
@@ -597,8 +701,7 @@ function calculate(){
   var sc = gv('status-card');
   sc.className = 'status-card ' + cls;
   gv('sc-badge').textContent = lbl;
-  var sign = surplus >= 0 ? '+' : '';
-  gv('sc-num').innerHTML = '<span class="sc-unit">' + sign + '</span>' +
+  gv('sc-num').innerHTML = '<span class="sc-unit">'+sign+'</span>' +
     Math.abs(surplus).toFixed(0) + ' <span style="font-size:20px;font-weight:600">lb N/ac</span>';
   gv('sc-rec').textContent = rec;
   var sca = gv('sc-action');
@@ -606,34 +709,96 @@ function calculate(){
   sca.className = 'sc-action';
 
   // ── METRICS ───────────────────────────────────────
-  gv('m-demand').textContent  = Math.round(demand);
-  gv('m-avail').textContent   = Math.round(totalAvail);
-  gv('m-remain').textContent  = Math.round(stillNeeded);
+  gv('m-demand').textContent = r2(demand);
+  gv('m-avail').textContent  = r2(totalAvail);
+  gv('m-remain').textContent = r2(stillNeeded);
 
-  // ── BUDGET TABLE ──────────────────────────────────
+  // ── VISUAL BARS ───────────────────────────────────
+  var maxN = Math.max(demand, appliedN + soilCredits) * 1.1 || 1;
+  var appliedPct  = Math.min(100, appliedN / maxN * 100);
+  var creditsPct  = Math.min(100, soilCredits / maxN * 100);
+  var lossesPct   = Math.min(100, totalLoss / maxN * 100);
+  gv('bv-applied-bar').style.width = appliedPct + '%';
+  gv('bv-credits-bar').style.width = creditsPct + '%';
+  gv('bv-losses-bar').style.width  = lossesPct + '%';
+  gv('bv-sources-val').textContent = r2(appliedN) + ' lb/ac';
+  gv('bv-credits-val').textContent = r2(soilCredits) + ' lb/ac';
+  gv('bv-losses-val').textContent  = '−' + r2(totalLoss) + ' lb/ac';
+
+  // ── BREAKDOWN TABLE ───────────────────────────────
+  function sec(label, cls){
+    return {sec:true, l:label, secCls: cls||''};
+  }
+  function row(label, val, colorCls, opts){
+    return {l:label, v:val, c:colorCls||'', tot:opts&&opts.tot, big:opts&&opts.big, sub:opts&&opts.sub};
+  }
+
   var rows = [];
-  rows.push({l:'Total Crop N Demand', v:Math.round(demand), c:''});
-  if (prevCredit > 0) rows.push({l:'Previous Crop Credit ('+{soy:'Soy',alfalfa:'Alfalfa',legcover:'Cover Crop'}[prevCrop]+')', v:'+'+prevCredit, c:'td-cr'});
-  rows.push({l:'OM Mineralization ('+(texture)+' soil)', v:'+'+Math.round(omCredit), c:'td-cr'});
-  if (ppRate > 0) rows.push({l:'Pre-Plant ('+Math.round(ppEff*100)+'% eff.)', v:'+'+Math.round(ppN), c:'td-cr'});
-  if (sdRate > 0) rows.push({l:'Sidedress (100% eff.)', v:'+'+Math.round(sdN), c:'td-cr'});
-  if (f1 > 0) rows.push({l:'Fertigation 1', v:'+'+f1, c:'td-cr'});
-  if (f2 > 0) rows.push({l:'Fertigation 2', v:'+'+f2, c:'td-cr'});
-  if (f3 > 0) rows.push({l:'Fertigation 3', v:'+'+f3, c:'td-cr'});
-  if (leachLoss > 0) rows.push({l:'Leaching Loss ('+leachEvents+' event'+(leachEvents>1?'s':'')+')', v:'−'+Math.round(leachLoss), c:'td-db'});
-  if (satLoss > 0)   rows.push({l:'Denitrification Loss (saturation)', v:'−'+Math.round(satLoss), c:'td-db'});
-  if (irrigLoss > 0) rows.push({l:'Irrigation Excess Loss', v:'−'+Math.round(irrigLoss), c:'td-db'});
-  rows.push({l:'Total N Available', v:Math.round(totalAvail), c:'', tot:true});
-  rows.push({l:'N Uptake to Date ('+stageVal+')', v:'−'+Math.round(uptakeToDate), c:'td-db'});
-  rows.push({l:'N Remaining in System', v:Math.round(remaining), c:''});
-  rows.push({l:'N Still Required', v:'−'+Math.round(stillNeeded), c:'td-db'});
-  rows.push({l:'Surplus / (Deficit)', v:sign+Math.round(surplus), c:surplus>=0?'td-cr':'td-db', tot:true, big:true});
+
+  // DEMAND
+  rows.push(sec('N Demand', 'first'));
+  rows.push(row('Yield Goal × N Factor ('+yg+' bu × '+nFactor.toFixed(2)+' lb/bu)', r2(demand), ''));
+
+  // APPLIED N SOURCES
+  rows.push(sec('Applied Nitrogen', 'sources'));
+  if(ppRate > 0){
+    var ppTimingLabel = (ppTiming && ppTiming.value==='fall') ? 'Fall' : 'Spring Pre-Plant';
+    rows.push(row('Pre-Plant — '+ppTimingLabel+' ('+r2(ppEff*100)+'% eff.)', '+'+r2(ppN), 'td-cr'));
+    if(ppTimingLoss > 0.5) rows.push(row('  Timing / Volatilization Loss', '−'+r2(ppTimingLoss), 'td-db'));
+  }
+  if(stRate > 0) rows.push(row('Starter N at Planting (100%)', '+'+r2(stN), 'td-cr'));
+  if(sdRate > 0) rows.push(row('Sidedress (100% eff.)', '+'+r2(sdN), 'td-cr'));
+  if(f1 > 0) rows.push(row('Fertigation 1 (100%)', '+'+r2(f1N), 'td-cr'));
+  if(f2 > 0) rows.push(row('Fertigation 2 (100%)', '+'+r2(f2N), 'td-cr'));
+  if(f3 > 0) rows.push(row('Fertigation 3 (100%)', '+'+r2(f3N), 'td-cr'));
+  rows.push(row('Subtotal Applied', '+'+r2(appliedN), 'td-cr', {sub:true}));
+
+  // SOIL & ROTATION CREDITS
+  rows.push(sec('Soil & Rotation Credits', 'sources'));
+  if(residualN > 0) rows.push(row('Residual Soil Nitrate (0–24" test)', '+'+r2(residualN), 'td-cr'));
+  if(irrigWaterN > 0.5) rows.push(row('Irrigation Water N ('+irrigPPM+' ppm × '+irrigInches+'")', '+'+r2(irrigWaterN), 'td-cr'));
+  var txLabel = {sandy:'Sandy (18 lb/% OM)', medium:'Medium (22 lb/% OM)', fine:'Fine (28 lb/% OM)'}[texture];
+  rows.push(row('OM Mineralization — '+txLabel, '+'+r2(omCredit), 'td-cr'));
+  if(prevCredit > 0){
+    var pcLabel = {soy:'Soybean ('+prevCredit+' lb, UNL EC117)', alfalfa:'Alfalfa 1st yr', legcover:'Legume Cover Crop'}[prevCrop];
+    rows.push(row('Previous Crop Credit — '+pcLabel, '+'+prevCredit, 'td-cr'));
+  }
+  rows.push(row('Subtotal Soil Credits', '+'+r2(soilCredits), 'td-cr', {sub:true}));
+
+  // TOTAL SUPPLY
+  rows.push(row('Total N Supply', '+'+r2(appliedN+soilCredits), 'td-cr', {tot:true}));
+
+  // LOSSES
+  rows.push(sec('N Losses', 'losses'));
+  if(ppTimingLoss > 0.5){
+    // already shown as deduction under applied, don't double-count
+  }
+  if(leachLoss > 0) rows.push(row('Leaching — '+leachEvents+' qualifying event'+(leachEvents>1?'s':'')+' ('+texture+' '+tx.leachPct+'%/event)', '−'+r2(leachLoss), 'td-db'));
+  if(satLoss > 0)   rows.push(row('Denitrification — Saturation >48 hr ('+texture+' '+tx.satPct+'%)', '−'+r2(satLoss), 'td-db'));
+  if(irrigExcessLoss > 0) rows.push(row('Irrigation Excess Loss ('+(irrigExcess===1?'Moderate 8%':'Heavy 15%')+')', '−'+r2(irrigExcessLoss), 'td-db'));
+  if(rawLoss > totalLoss) rows.push(row('Loss Cap Applied (55% max of applied N)', '', 'td-db'));
+  rows.push(row('Total N Losses', '−'+r2(totalLoss), 'td-db', {tot:true}));
+
+  // NET BUDGET
+  rows.push(sec('Net Budget', 'net'));
+  rows.push(row('Net N Available', r2(totalAvail), ''));
+  rows.push(row('N Uptake to Date ('+stageVal+', '+stagePct+'%)', '−'+r2(uptakeToDate), 'td-db'));
+  rows.push(row('N Remaining in System', r2(remaining), remaining>=0?'td-cr':'td-db'));
+  rows.push(row('N Still Required to Maturity', '−'+r2(stillNeeded), 'td-db'));
+  rows.push(row('Surplus / (Deficit)', sign+r2(surplus), surplus>=0?'td-cr':'td-db', {tot:true, big:true}));
 
   var html = '';
   rows.forEach(function(r){
-    var tc = r.tot ? ' class="tr-tot"' : '';
+    if(r.sec){
+      html += '<tr class="tr-sec '+r.secCls+'"><td colspan="2">'+r.l+'</td></tr>';
+      return;
+    }
+    var trCls = r.tot ? ' class="tr-tot"' : r.sub ? ' class="tr-sub"' : '';
     var fs = r.big ? 'font-size:14px;' : '';
-    html += '<tr'+tc+'><td style="'+fs+'">'+r.l+'</td><td style="text-align:right;'+fs+'" class="'+r.c+'">'+r.v+'</td></tr>';
+    html += '<tr'+trCls+'><td style="'+fs+'">'+r.l+'</td>';
+    if(r.v !== '') html += '<td style="text-align:right;'+fs+'" class="'+r.c+'">'+r.v+'</td>';
+    else html += '<td></td>';
+    html += '</tr>';
   });
   gv('tbody').innerHTML = html;
 
@@ -644,9 +809,9 @@ function calculate(){
   mrtnBox.style.display = 'flex';
   gv('mrtn-txt').innerHTML = '<strong>MRTN Reference:</strong> At $4.50/bu corn, ' +
     'maximum return to nitrogen for corn after ' +
-    (prevCrop === 'soy' ? 'soybean' : 'corn') + ' is typically ' +
-    mrtnLow + '–' + mrtnHigh + ' lb N/ac (ISU MRTN / Sawyer et al.). ' +
-    'Your total applied N: <strong>' + rawApplied + ' lb N/ac</strong>.';
+    (prevCrop==='soy'?'soybean':'corn') + ' is typically ' +
+    mrtnLow+'–'+mrtnHigh+' lb N/ac (ISU MRTN / Sawyer et al.). ' +
+    'Your total applied N: <strong>'+rawApplied+' lb N/ac</strong>.';
 
   // ── SHOW RESULTS ──────────────────────────────────
   gv('results').style.display = 'block';
