@@ -290,6 +290,26 @@ footer{text-align:center;font-size:11px;color:var(--t4);
   padding:8px 16px 32px}
 footer a{color:var(--t3);text-decoration:none}
 
+/* ── GROWTH STAGE ESTIMATOR ─────────────────────── */
+.stage-row{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.stage-est{
+  flex:1;display:flex;align-items:baseline;gap:8px;
+  padding:8px 12px;background:#f0faf4;border-radius:var(--r-sm);
+  border:1px solid #bbf7d0;min-height:38px}
+.stage-est-lbl{font-size:15px;font-weight:700;color:var(--ok)}
+.stage-est-sub{font-size:12px;color:var(--t3)}
+.stage-est.manual{background:var(--blue-bg);border-color:#bfdbfe}
+.stage-est.manual .stage-est-lbl{color:var(--blue)}
+.stage-est.manual .stage-est-sub{color:#1d4ed8}
+.stage-override-btn{
+  height:36px;padding:0 12px;border-radius:var(--r-sm);
+  font-size:12px;font-weight:600;cursor:pointer;
+  background:var(--bg);color:var(--t3);border:1.5px solid var(--border);
+  white-space:nowrap;flex-shrink:0}
+.stage-override-btn:hover{background:#e8f0e8;color:var(--t2)}
+.stage-select-hidden{display:none}
+.stage-select-hidden.show{display:block;margin-top:6px}
+
 /* ── FIELD BAR ───────────────────────────────────── */
 .field-bar{
   background:var(--card);border-bottom:1px solid var(--border);
@@ -461,24 +481,32 @@ footer a{color:var(--t3);text-decoration:none}
       <option value="other">Other / Grass Cover Crop</option>
     </select>
   </div>
-  <div class="grid2">
-    <div class="field"><label>Planting Date</label><input type="date" id="plantDate" value="2026-05-02"></div>
-    <div class="field">
-      <label>Current Growth Stage</label>
-      <select id="stage">
-        <option value="VE-V3" data-pct="5">VE – V3 (Emergence)</option>
-        <option value="V4-V6" data-pct="10">V4 – V6</option>
-        <option value="V7-V9" data-pct="20">V7 – V9</option>
-        <option value="V10-V12" data-pct="35" selected>V10 – V12</option>
-        <option value="V13-V15" data-pct="55">V13 – V15</option>
-        <option value="V16-VT" data-pct="70">V16 – VT (Tassel)</option>
-        <option value="R1" data-pct="80">R1 — Silking</option>
-        <option value="R2" data-pct="88">R2 — Blister</option>
-        <option value="R3" data-pct="94">R3 — Milk</option>
-        <option value="R4" data-pct="98">R4 — Dough</option>
-        <option value="R5-R6" data-pct="100">R5–R6 (Black Layer)</option>
-      </select>
+  <div class="field">
+    <label>Planting Date</label>
+    <input type="date" id="plantDate" value="2026-05-02" oninput="updateStageFromDate()">
+  </div>
+  <div class="field">
+    <div class="stage-row">
+      <div class="stage-est" id="stage-est">
+        <span class="stage-est-lbl" id="stage-est-lbl">—</span>
+        <span class="stage-est-sub" id="stage-est-sub"></span>
+      </div>
+      <button type="button" class="stage-override-btn" id="stage-override-btn" onclick="toggleStageOverride()">Override</button>
     </div>
+    <select id="stage" class="stage-select-hidden" onchange="onStageOverride()">
+      <option value="VE-V3" data-pct="5">VE – V3 (Emergence)</option>
+      <option value="V4-V6" data-pct="10">V4 – V6</option>
+      <option value="V7-V9" data-pct="20">V7 – V9</option>
+      <option value="V10-V12" data-pct="35">V10 – V12</option>
+      <option value="V13-V15" data-pct="55">V13 – V15</option>
+      <option value="V16-VT" data-pct="70">V16 – VT (Tassel)</option>
+      <option value="R1" data-pct="80">R1 — Silking</option>
+      <option value="R2" data-pct="88">R2 — Blister</option>
+      <option value="R3" data-pct="94">R3 — Milk</option>
+      <option value="R4" data-pct="98">R4 — Dough</option>
+      <option value="R5-R6" data-pct="100">R5–R6 (Black Layer)</option>
+    </select>
+    <div class="hint" id="stage-hint"></div>
   </div>
 </div>
 
@@ -929,6 +957,11 @@ function applyField(id){
     gv('prevCrop').value  = f.prev_crop || 'corn';
     gv('residualN').value = f.residual_n || 0;
     gv('plantDate').value = f.planting_date || '';
+    // Reset stage to auto-estimate when loading a field
+    stageManual = false;
+    gv('stage').classList.remove('show');
+    gv('stage-override-btn').textContent = 'Override';
+    updateStageFromDate();
     setActiveField(f.id, f.name);
     gv('yieldGoal').scrollIntoView({behavior:'smooth', block:'center'});
   }
@@ -982,6 +1015,94 @@ function logRun(inputs, results){
   }).then(function(res){
     if(res.error) console.warn('logRun',res.error);
   });
+}
+
+// ── GROWTH STAGE ESTIMATOR ────────────────────────
+// Calendar-day model calibrated for Nebraska corn (late April / early May planting).
+// GDD-based would be more accurate; this is within ~1 stage for typical years.
+var STAGE_DAYS = [
+  {v:'VE-V3',  l:'VE–V3',  pct:5,   min:0,   max:22},
+  {v:'V4-V6',  l:'V4–V6',  pct:10,  min:22,  max:38},
+  {v:'V7-V9',  l:'V7–V9',  pct:20,  min:38,  max:51},
+  {v:'V10-V12',l:'V10–V12',pct:35,  min:51,  max:63},
+  {v:'V13-V15',l:'V13–V15',pct:55,  min:63,  max:72},
+  {v:'V16-VT', l:'V16–VT', pct:70,  min:72,  max:80},
+  {v:'R1',     l:'R1',     pct:80,  min:80,  max:89},
+  {v:'R2',     l:'R2',     pct:88,  min:89,  max:97},
+  {v:'R3',     l:'R3',     pct:94,  min:97,  max:107},
+  {v:'R4',     l:'R4',     pct:98,  min:107, max:117},
+  {v:'R5-R6',  l:'R5–R6',  pct:100, min:117, max:999}
+];
+
+var stageManual = false; // true when user has overridden the estimate
+
+function stageFromDays(days){
+  for(var i=0; i<STAGE_DAYS.length; i++){
+    if(days >= STAGE_DAYS[i].min && days < STAGE_DAYS[i].max) return STAGE_DAYS[i];
+  }
+  return STAGE_DAYS[STAGE_DAYS.length-1];
+}
+
+function updateStageFromDate(){
+  var pd = gv('plantDate').value;
+  var est = gv('stage-est');
+  if(!pd){
+    gv('stage-est-lbl').textContent = 'Enter planting date';
+    gv('stage-est-sub').textContent = '';
+    gv('stage-hint').textContent    = '';
+    return;
+  }
+  var plant = new Date(pd + 'T12:00:00'); // noon to avoid DST edge cases
+  var today = new Date();
+  var days  = Math.floor((today - plant) / 86400000);
+  if(days < 0){
+    gv('stage-est-lbl').textContent = 'Not planted yet';
+    gv('stage-est-sub').textContent = '';
+    gv('stage-hint').textContent    = '';
+    return;
+  }
+  if(!stageManual){
+    var s = stageFromDays(days);
+    // sync hidden select
+    gv('stage').value = s.v;
+    est.className = 'stage-est';
+    gv('stage-est-lbl').textContent = s.l;
+    gv('stage-est-sub').textContent = 'Day '+days+' · est. from planting date';
+    gv('stage-hint').textContent    = '';
+  } else {
+    // show days alongside manual selection
+    gv('stage-est-sub').textContent = 'Day '+days+' from planting (manual override)';
+  }
+}
+
+function toggleStageOverride(){
+  var sel  = gv('stage');
+  var btn  = gv('stage-override-btn');
+  var est  = gv('stage-est');
+  if(!stageManual){
+    // enter manual mode
+    stageManual = true;
+    sel.classList.add('show');
+    btn.textContent = 'Use estimate';
+    est.className = 'stage-est manual';
+    gv('stage-est-lbl').textContent = sel.options[sel.selectedIndex].text.split('—')[0].split(' (')[0].trim();
+    gv('stage-est-sub').textContent = 'Manual override';
+  } else {
+    // back to auto
+    stageManual = false;
+    sel.classList.remove('show');
+    btn.textContent = 'Override';
+    updateStageFromDate();
+  }
+}
+
+function onStageOverride(){
+  if(stageManual){
+    var sel = gv('stage');
+    var lbl = sel.options[sel.selectedIndex].text.split('—')[0].split(' (')[0].trim();
+    gv('stage-est-lbl').textContent = lbl;
+    gv('stage-est-sub').textContent = 'Manual override';
+  }
 }
 
 // ── STAGES ────────────────────────────────────────
@@ -1262,7 +1383,10 @@ function calculate(){
   });
 }
 
-document.addEventListener('DOMContentLoaded', initSupabase);
+document.addEventListener('DOMContentLoaded', function(){
+  updateStageFromDate();
+  initSupabase();
+});
 </script>
 </body>
 </html>
