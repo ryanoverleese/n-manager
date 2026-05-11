@@ -296,23 +296,40 @@ footer a{color:var(--t3);text-decoration:none}
   padding:10px 16px;display:flex;align-items:center;gap:8px;
   flex-wrap:wrap;position:sticky;top:0;z-index:100;
   box-shadow:0 1px 4px rgba(12,26,12,.07)}
+/* left cluster: existing-field picker */
+.fb-existing{display:flex;align-items:center;gap:6px;flex:1;min-width:0}
 .field-bar select{
-  flex:1;min-width:140px;height:36px;padding:0 10px;
+  flex:1;min-width:100px;height:36px;padding:0 10px;
   border:1.5px solid var(--border);border-radius:var(--r-sm);
   font-size:13px;color:var(--t1);background:var(--bg);
   appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23607060' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
 .field-bar select:focus{outline:none;border-color:var(--focus)}
+/* divider between existing and new */
+.fb-divider{width:1px;height:24px;background:var(--border);flex-shrink:0}
 .fb-btn{
   height:36px;padding:0 14px;border-radius:var(--r-sm);
   font-size:13px;font-weight:600;cursor:pointer;
   border:1.5px solid var(--border);white-space:nowrap;
-  display:flex;align-items:center;gap:6px;transition:background .15s}
+  display:flex;align-items:center;gap:5px;transition:background .15s,opacity .15s}
 .fb-btn.load{background:var(--bg);color:var(--t2)}
 .fb-btn.load:hover{background:#e8f0e8}
+.fb-btn.new-field{background:var(--bg);color:var(--brand);border-color:var(--brand)}
+.fb-btn.new-field:hover{background:#f0faf4}
 .fb-btn.save{background:var(--brand);color:#fff;border-color:var(--brand)}
 .fb-btn.save:hover{background:var(--brand2)}
-.fb-btn:disabled{opacity:.5;cursor:default}
+.fb-btn.update{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+.fb-btn.update:hover{background:#1e40af}
+.fb-btn:disabled{opacity:.4;cursor:default;pointer-events:none}
+/* active field pill shown when a field is loaded */
+.fb-active{
+  display:none;align-items:center;gap:6px;width:100%;
+  padding:6px 10px;background:#f0faf4;border-radius:var(--r-sm);
+  border:1px solid #bbf7d0;font-size:12px;color:var(--ok)}
+.fb-active.show{display:flex}
+.fb-active-name{font-weight:700;flex:1;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.fb-active svg{width:14px;height:14px;flex-shrink:0}
 .fb-status{font-size:12px;color:var(--t3);width:100%;text-align:center;
   display:none;padding-top:2px}
 </style>
@@ -340,11 +357,26 @@ footer a{color:var(--t3);text-decoration:none}
 
 <!-- ── FIELD BAR ──────────────────────────────────── -->
 <div class="field-bar">
-  <select id="field-select" onchange="onFieldSelect()" title="Saved fields">
-    <option value="">— Saved fields —</option>
-  </select>
-  <button class="fb-btn load" id="load-field-btn" onclick="loadSelectedField()" disabled>Load</button>
+  <!-- Existing fields -->
+  <div class="fb-existing">
+    <select id="field-select" onchange="onFieldSelect()" title="Open a saved field">
+      <option value="">— Open saved field —</option>
+    </select>
+    <button class="fb-btn load" id="load-field-btn" onclick="loadSelectedField()" disabled>Open</button>
+  </div>
+  <div class="fb-divider"></div>
+  <!-- New / save actions -->
+  <button class="fb-btn new-field" id="new-field-btn" onclick="newField()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    New Field
+  </button>
   <button class="fb-btn save" id="save-field-btn" onclick="saveField()">Save Field</button>
+  <!-- Active field indicator -->
+  <div class="fb-active" id="fb-active">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <span class="fb-active-name" id="fb-active-name">—</span>
+    <span style="font-size:11px;opacity:.75">Editing</span>
+  </div>
   <div class="fb-status" id="fb-status"></div>
 </div>
 
@@ -721,6 +753,47 @@ function loadFields(){
   });
 }
 
+// Track current editing state
+var activeFieldId = null; // null = new field mode
+
+function setActiveField(id, name){
+  activeFieldId = id;
+  var isEdit = !!id;
+  // Save button: "Save Field" (create) vs "Save Changes" (update)
+  var saveBtn = gv('save-field-btn');
+  saveBtn.textContent = isEdit ? 'Save Changes' : 'Save Field';
+  saveBtn.className = 'fb-btn ' + (isEdit ? 'update' : 'save');
+  // Active field banner
+  var banner = gv('fb-active');
+  if(isEdit){
+    gv('fb-active-name').textContent = name || 'Field';
+    banner.classList.add('show');
+  } else {
+    banner.classList.remove('show');
+  }
+  // Sync dropdown to match
+  if(id) gv('field-select').value = id;
+}
+
+function newField(){
+  // Clear form to defaults
+  gv('fieldName').value  = '';
+  gv('county').value     = '';
+  gv('yieldGoal').value  = '200';
+  gv('om').value         = '2.5';
+  gv('texture').value    = 'medium';
+  gv('prevCrop').value   = 'corn';
+  gv('residualN').value  = '0';
+  gv('plantDate').value  = '';
+  gv('field-select').value = '';
+  gv('load-field-btn').disabled = true;
+  gv('results').style.display = 'none';
+  setActiveField(null, null);
+  sbStatus('');
+  // Focus field name so user can start typing
+  gv('fieldName').focus();
+}
+
 function onFieldSelect(){
   gv('load-field-btn').disabled = !gv('field-select').value;
 }
@@ -738,46 +811,47 @@ function loadSelectedField(){
     gv('yieldGoal').value    = f.yield_goal || 200;
     gv('prevCrop').value     = f.prev_crop || 'corn';
     gv('residualN').value    = f.residual_n || 0;
-    if(f.planting_date) gv('plantDate').value = f.planting_date;
-    sbStatus('Field loaded — update N applications below','var(--ok)');
-    setTimeout(function(){ sbStatus(''); }, 4000);
+    gv('plantDate').value    = f.planting_date || '';
+    setActiveField(f.id, f.name);
+    sbStatus('');
+    // Scroll to top of form
+    gv('fieldName').scrollIntoView({behavior:'smooth', block:'center'});
   });
 }
 
 function saveField(){
   if(!sb){ sbStatus('Still connecting…','var(--t3)'); return; }
-  if(!sbUser){ sbStatus('Auth not ready, try again in a moment','var(--t3)'); return; }
+  if(!sbUser){ sbStatus('Auth not ready, try again','var(--t3)'); return; }
   var nm = (gv('fieldName').value||'').trim();
   if(!nm){ sbStatus('Enter a field name first','var(--bad)'); gv('fieldName').focus(); return; }
   var payload = {
-    user_id:    sbUser.id,
-    name:       nm,
-    county:     gv('county').value || '',
-    texture:    gv('texture').value || 'medium',
-    om:         parseFloat(gv('om').value) || 2.5,
-    yield_goal: parseInt(gv('yieldGoal').value) || 200,
-    prev_crop:  gv('prevCrop').value || 'corn',
-    residual_n: parseInt(gv('residualN').value) || 0,
+    user_id:       sbUser.id,
+    name:          nm,
+    county:        gv('county').value || '',
+    texture:       gv('texture').value || 'medium',
+    om:            parseFloat(gv('om').value) || 2.5,
+    yield_goal:    parseInt(gv('yieldGoal').value) || 200,
+    prev_crop:     gv('prevCrop').value || 'corn',
+    residual_n:    parseInt(gv('residualN').value) || 0,
     planting_date: gv('plantDate').value || null,
-    updated_at: new Date().toISOString()
+    updated_at:    new Date().toISOString()
   };
-  var selId = gv('field-select').value;
-  var q = selId
-    ? sb.from('nm_fields').update(payload).eq('id',selId).select('id').single()
+  var q = activeFieldId
+    ? sb.from('nm_fields').update(payload).eq('id',activeFieldId).select('id').single()
     : sb.from('nm_fields').insert(payload).select('id').single();
   q.then(function(res){
     if(res.error){ sbStatus('Save failed: '+res.error.message,'var(--bad)'); return; }
+    var id = (res.data && res.data.id) || activeFieldId;
+    setActiveField(id, nm);
     sbStatus('Saved!','var(--ok)');
     setTimeout(function(){ sbStatus(''); }, 3000);
-    var id = res.data && res.data.id;
     loadFields();
-    if(!selId && id) setTimeout(function(){ gv('field-select').value = id; gv('load-field-btn').disabled = false; }, 300);
   });
 }
 
 function logRun(inputs, results){
   if(!sb || !sbUser) return;
-  var selId = gv('field-select').value || null;
+  var selId = activeFieldId || null;
   sb.from('nm_runs').insert({
     user_id:  sbUser.id,
     field_id: selId,
