@@ -1,2 +1,8 @@
 [functions]
   directory = "netlify/functions"
+
+# Crawler hint for the whole app. This does not authenticate or hide the app.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"

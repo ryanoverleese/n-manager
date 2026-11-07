@@ -1,0 +1,5 @@
+# Private app. Whole-site crawler notice only — not access control.
+# Do not list individual paths, customers, or tokens.
+User-agent: *
+Disallow: /
+
