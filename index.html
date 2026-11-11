@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>N Manager — Acre Insights</title>
+<meta name="description" content="Irrigated corn mid-season nitrogen sufficiency using yield goal, soil, applications, and losses.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
 /* ── TOKENS ─────────────────────────────────────── */
 :root{
@@ -364,6 +369,10 @@ footer a{color:var(--t3);text-decoration:none}
 .fb-active svg{width:14px;height:14px;flex-shrink:0}
 .fb-status{font-size:12px;color:var(--t3);width:100%;text-align:center;
   display:none;padding-top:2px}
+.fb-status button.fb-retry{
+  background:none;border:0;padding:0;margin-left:6px;
+  font:inherit;font-weight:700;color:inherit;cursor:pointer;
+  text-decoration:underline}
 </style>
 </head>
 <body>
@@ -372,7 +381,7 @@ footer a{color:var(--t3);text-decoration:none}
 <header>
   <div class="hd-inner">
     <div class="hd-icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
         <path d="M12 2C12 2 7 6 7 11a5 5 0 0 0 10 0C17 6 12 2 12 2z"/>
         <line x1="12" y1="22" x2="12" y2="11"/>
         <path d="M9 15 Q12 13 15 15"/>
@@ -400,7 +409,7 @@ footer a{color:var(--t3);text-decoration:none}
     </div>
     <div class="fb-divider"></div>
     <button class="fb-btn new-field" onclick="startNewField()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px" aria-hidden="true" focusable="false"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       New Field
     </button>
   </div>
@@ -416,13 +425,13 @@ footer a{color:var(--t3);text-decoration:none}
   <!-- STATE C: Field is active — show name + save changes / switch field -->
   <div id="fb-state-edit" class="fb-state" style="display:none">
     <div class="fb-active show" id="fb-active">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       <span class="fb-active-name" id="fb-active-name">—</span>
     </div>
     <button class="fb-btn update" onclick="saveField()">Save Changes</button>
     <div class="fb-divider"></div>
     <button class="fb-btn new-field" onclick="startNewField()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px" aria-hidden="true" focusable="false"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       New
     </button>
     <select id="field-select-edit" onchange="switchField(this.value)" title="Switch field" style="height:36px;padding:0 28px 0 10px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:13px;background:var(--bg);appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%228%22 viewBox=%220 0 12 8%22%3E%3Cpath d=%22M1 1l5 5 5-5%22 stroke=%22%23607060%22 stroke-width=%221.5%22 fill=%22none%22 stroke-linecap=%22round%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 10px center;cursor:pointer">
@@ -430,7 +439,7 @@ footer a{color:var(--t3);text-decoration:none}
     </select>
   </div>
 
-  <div class="fb-status" id="fb-status"></div>
+  <div class="fb-status" id="fb-status" role="status" aria-live="polite"></div>
 </div>
 
 <div class="wrap">
@@ -439,7 +448,7 @@ footer a{color:var(--t3);text-decoration:none}
 <div class="card">
   <div class="card-hd">
     <div class="card-ico">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
         <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
       </svg>
     </div>
@@ -487,10 +496,11 @@ footer a{color:var(--t3);text-decoration:none}
   </div>
   <div class="field">
     <div class="stage-row">
-      <div class="stage-est" id="stage-est">
+      <div class="stage-est" id="stage-est" role="status" aria-live="polite">
         <span class="stage-est-lbl" id="stage-est-lbl">—</span>
         <span class="stage-est-sub" id="stage-est-sub"></span>
       </div>
+      <button type="button" class="stage-override-btn" id="gdu-retry-btn" hidden onclick="updateStageFromDate()">Retry</button>
       <button type="button" class="stage-override-btn" id="stage-override-btn" onclick="toggleStageOverride()">Override</button>
     </div>
     <select id="stage" class="stage-select-hidden" onchange="onStageOverride()">
@@ -514,7 +524,7 @@ footer a{color:var(--t3);text-decoration:none}
 <div class="card">
   <div class="card-hd">
     <div class="card-ico">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
         <path d="M12 22V12M5 12a7 7 0 0 1 14 0"/><circle cx="12" cy="7" r="3"/>
       </svg>
     </div>
@@ -617,7 +627,7 @@ footer a{color:var(--t3);text-decoration:none}
   <div class="loss-toggle" onclick="toggleLossCard()" id="loss-toggle">
     <div class="card-hd" style="border:none;margin:0;padding:0;flex:1">
       <div class="card-ico" style="background:#fff3cd">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
           <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
         </svg>
       </div>
@@ -678,7 +688,7 @@ footer a{color:var(--t3);text-decoration:none}
 </div>
 
 <button class="cta" onclick="calculate()">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
   Calculate N Status
 </button>
 
@@ -727,12 +737,12 @@ footer a{color:var(--t3);text-decoration:none}
   </div>
 
   <div id="mrtn-box" class="mrtn-box" style="display:none">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
     <div class="mrtn-txt" id="mrtn-txt"></div>
   </div>
 
   <button class="print-btn" onclick="window.print()">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
     Save as PDF / Print Report
   </button>
 
@@ -765,35 +775,70 @@ var SB_KEY = 'sb_publishable_PwKrpiIL2A83CfKIY14W_Q_Sdz84SSB';
 var sb = null;
 var sbUser = null;
 
-function fbStatus(msg, color){
+function fbStatus(msg, color, retryFn){
   var el = gv('fb-status');
-  el.textContent = msg;
   el.style.color = color || 'var(--t3)';
   el.style.display = msg ? 'block' : 'none';
+  el.textContent = msg || '';
+  if(retryFn && msg){
+    el.appendChild(document.createTextNode(' '));
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'fb-retry';
+    b.textContent = 'Retry';
+    b.addEventListener('click', retryFn);
+    el.appendChild(b);
+  }
 }
 function sbStatus(msg, color){ fbStatus(msg, color); }
 
 function initSupabase(){
-  if(!window.supabase){ console.warn('Supabase SDK not loaded'); return; }
+  if(!window.supabase){
+    console.warn('Supabase SDK not loaded');
+    fbStatus('Field storage is unavailable. Showing fields on this device.','var(--warn)');
+    loadFieldsLocal();
+    return;
+  }
   sb = window.supabase.createClient(SB_URL, SB_KEY, {
     auth:{persistSession:true, autoRefreshToken:true, storageKey:'nm_auth'}
   });
+  var settled = false;
+  fbStatus('Loading saved fields…');
+  var timer = setTimeout(function(){
+    if(settled) return;
+    fbStatus('Field storage is slow to respond. Showing fields on this device.','var(--warn)');
+    loadFieldsLocal();
+  }, 12000);
+  function done(){ settled = true; clearTimeout(timer); }
   sb.auth.getSession().then(function(res){
     if(res.data && res.data.session){
+      done();
       sbUser = res.data.session.user;
       loadFields();
     } else {
       sb.auth.signInAnonymously().then(function(res2){
+        done();
         if(res2.data && res2.data.user){
           sbUser = res2.data.user;
           migrateLocalFields();
           loadFields();
         } else {
           console.warn('anon sign-in failed', res2.error);
+          fbStatus('Could not reach field storage. Showing fields on this device.','var(--bad)');
           loadFieldsLocal();
         }
+      }).catch(function(err){
+        done();
+        console.warn('anon sign-in failed', err);
+        fbStatus('Could not reach field storage. Showing fields on this device.','var(--bad)');
+        loadFieldsLocal();
       });
     }
+  }).catch(function(err){
+    done();
+    console.warn('getSession failed', err);
+    fbStatus('Could not reach field storage. Showing fields on this device.','var(--bad)');
+    loadFieldsLocal();
   });
 }
 
@@ -823,11 +868,21 @@ function migrateLocalFields(){
   });
 }
 
-function loadFields(){
+function loadFields(opts){
+  opts = opts || {};
   if(sbUser){
+    if(!opts.silent) fbStatus('Loading saved fields…');
     sb.from('nm_fields').select('id,name,county').order('updated_at',{ascending:false}).then(function(res){
-      if(res.error){ console.error('loadFields',res.error); return; }
+      if(res.error){
+        console.error('loadFields',res.error);
+        fbStatus('Could not load saved fields.','var(--bad)', function(){ loadFields(); });
+        return;
+      }
       renderFieldOptions(res.data||[]);
+      if(!opts.silent) fbStatus('');
+    }).catch(function(err){
+      console.error('loadFields', err);
+      fbStatus('Could not load saved fields.','var(--bad)', function(){ loadFields(); });
     });
   } else {
     loadFieldsLocal();
@@ -911,17 +966,20 @@ function createField(){
     gv('prevCrop').value='corn'; gv('residualN').value='0'; gv('plantDate').value='';
     gv('results').style.display='none';
     setActiveField(id, nm);
-    loadFields();
+    loadFields({silent:true});
     fbStatus('Field created — fill in the details below','var(--ok)');
     setTimeout(function(){ fbStatus(''); }, 4000);
     gv('yieldGoal').scrollIntoView({behavior:'smooth', block:'center'});
   }
 
   if(sbUser){
+    fbStatus('Creating field…');
     var payload = Object.assign({user_id:sbUser.id, name:nm, county:county, updated_at:new Date().toISOString()}, defaults);
     sb.from('nm_fields').insert(payload).select('id').single().then(function(res){
       if(res.error){ fbStatus('Could not create: '+res.error.message,'var(--bad)'); return; }
       onCreated(res.data.id);
+    }).catch(function(){
+      fbStatus('Could not create field.','var(--bad)');
     });
   } else {
     // localStorage fallback
@@ -966,9 +1024,15 @@ function applyField(id){
     gv('yieldGoal').scrollIntoView({behavior:'smooth', block:'center'});
   }
   if(sbUser){
+    fbStatus('Opening field…');
     sb.from('nm_fields').select('*').eq('id',id).single().then(function(res){
-      if(res.error||!res.data){ fbStatus('Could not open field','var(--bad)'); return; }
+      if(res.error||!res.data){
+        fbStatus('Could not open field.','var(--bad)', function(){ applyField(id); });
+        return;
+      }
       renderField(res.data);
+    }).catch(function(){
+      fbStatus('Could not open field.','var(--bad)', function(){ applyField(id); });
     });
   } else {
     var f = lsGetFields().find(function(x){ return x.id===id; });
@@ -988,10 +1052,16 @@ function saveField(){
     updated_at:    new Date().toISOString()
   };
   if(sbUser){
+    fbStatus('Saving…');
     sb.from('nm_fields').update(payload).eq('id',activeFieldId).then(function(res){
-      if(res.error){ fbStatus('Save failed: '+res.error.message,'var(--bad)'); return; }
+      if(res.error){
+        fbStatus('Save failed: '+res.error.message,'var(--bad)', function(){ saveField(); });
+        return;
+      }
       fbStatus('Saved!','var(--ok)');
       setTimeout(function(){ fbStatus(''); }, 2500);
+    }).catch(function(){
+      fbStatus('Save failed.','var(--bad)', function(){ saveField(); });
     });
   } else {
     var arr = lsGetFields();
@@ -1037,6 +1107,13 @@ var STAGE_GDU = [
 
 var stageManual = false;
 var gduCache = {};
+var gduRequest = 0;
+var activeGduXhr = null;
+
+function setGduRetry(show){
+  var b = gv('gdu-retry-btn');
+  if(b) b.hidden = !show;
+}
 
 function stageFromGDU(gdu){
   var s = STAGE_GDU[0];
@@ -1050,6 +1127,12 @@ function stageFromGDU(gdu){
 function fetchGDU(lat, lon, startDate, cb){
   var cacheKey = lat.toFixed(3)+','+lon.toFixed(3)+','+startDate;
   if(gduCache[cacheKey] !== undefined){ cb(gduCache[cacheKey]); return; }
+  if(activeGduXhr){
+    var old = activeGduXhr;
+    activeGduXhr = null;
+    old.onload = null; old.onerror = null; old.ontimeout = null;
+    try{ old.abort(); }catch(e){}
+  }
   var today = new Date().toISOString().slice(0,10);
   var url = 'https://api.open-meteo.com/v1/forecast' +
     '?latitude='+lat.toFixed(4)+'&longitude='+lon.toFixed(4) +
@@ -1057,7 +1140,12 @@ function fetchGDU(lat, lon, startDate, cb){
     '&start_date='+startDate+'&end_date='+today +
     '&temperature_unit=fahrenheit&timezone=auto';
   var xhr = new XMLHttpRequest();
+  activeGduXhr = xhr;
+  xhr.timeout = 12000;
+  function finish(){ if(activeGduXhr === xhr) activeGduXhr = null; }
   xhr.onload = function(){
+    finish();
+    if(xhr.status < 200 || xhr.status >= 300){ cb(null); return; }
     try{
       var d = JSON.parse(xhr.responseText);
       if(!d.daily || !d.daily.temperature_2m_max){ cb(null); return; }
@@ -1072,13 +1160,16 @@ function fetchGDU(lat, lon, startDate, cb){
       cb(gdu);
     }catch(e){ cb(null); }
   };
-  xhr.onerror = function(){ cb(null); };
+  xhr.onerror = function(){ finish(); cb(null); };
+  xhr.ontimeout = function(){ finish(); cb(null); };
   xhr.open('GET', url);
   xhr.send();
 }
 
 function updateStageFromDate(){
   if(stageManual) return;
+  var req = ++gduRequest;
+  setGduRetry(false);
   var pd = gv('plantDate').value;
   if(!pd){
     gv('stage-est-lbl').textContent = 'Enter planting date';
@@ -1094,10 +1185,13 @@ function updateStageFromDate(){
   gv('stage-est-lbl').textContent = 'Calculating GDU…';
   gv('stage-est-sub').textContent = '';
   function withLocation(lat, lon){
+    if(req !== gduRequest) return;
     fetchGDU(lat, lon, pd, function(gdu){
+      if(req !== gduRequest) return;
       if(gdu === null){
         gv('stage-est-lbl').textContent = 'GDU unavailable';
         gv('stage-est-sub').textContent = 'Check connection';
+        setGduRetry(true);
         return;
       }
       var s = stageFromGDU(gdu);
@@ -1105,6 +1199,7 @@ function updateStageFromDate(){
       gv('stage-est').className = 'stage-est';
       gv('stage-est-lbl').textContent = s.l;
       gv('stage-est-sub').textContent = gdu.toLocaleString()+' GDU · from planting date';
+      setGduRetry(false);
     });
   }
   if(navigator.geolocation){
@@ -1123,6 +1218,7 @@ function toggleStageOverride(){
   var btn = gv('stage-override-btn');
   if(!stageManual){
     stageManual = true;
+    setGduRetry(false);
     sel.classList.add('show');
     btn.textContent = 'Use GDU';
     gv('stage-est').className = 'stage-est manual';
